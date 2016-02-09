@@ -35,9 +35,9 @@
 #include <vector>
 #include <string>
 
-#include "graspitGUI.h"
-#include "world.h"
-#include "ivmgr.h"
+#include "include/graspitGUI.h"
+#include "include/world.h"
+#include "include/ivmgr.h"
 
 class GraspPlanningState;
 class Hand;
