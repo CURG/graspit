@@ -402,6 +402,7 @@
         <addaction name="separator" />
         <addaction name="fileImportRobotAction" />
         <addaction name="fileImportObjectAction" />
+        <addaction name="fileImportObjectDBAction" />
         <addaction name="fileImportObstacleAction" />
         <addaction name="separator" />
         <addaction name="fileEditSettingsAction" />
@@ -631,6 +632,17 @@
       </property>
       <property name="text" >
         <string>Import Object...</string>
+      </property>
+    </action>
+    <action name="fileImportObjectDBAction" >
+      <property name="name" >
+        <cstring>fileImportObjectDBAction</cstring>
+      </property>
+      <property name="iconText" >
+        <string>Import Object DB</string>
+      </property>
+      <property name="text" >
+        <string>Import Object DB...</string>
       </property>
     </action>
     <action name="fileImportObstacleAction" >

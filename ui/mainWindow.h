@@ -85,6 +85,7 @@ public Q_SLOTS:
 	void fileImportRobot();
 	void fileImportObstacle();
 	void fileImportObject();
+    void fileImportObjectDB();
 	void fileEditSettings();
 	void fileExit();
 	void fileSaveImage();

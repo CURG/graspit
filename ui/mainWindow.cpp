@@ -104,6 +104,7 @@ MainWindow::MainWindow(QWidget *parent)
   QObject::connect(mUI->fileImportRobotAction, SIGNAL(triggered()), this, SLOT(fileImportRobot()));
   QObject::connect(mUI->fileImportObstacleAction, SIGNAL(triggered()), this, SLOT(fileImportObstacle()));
   QObject::connect(mUI->fileImportObjectAction, SIGNAL(triggered()), this, SLOT(fileImportObject()));
+  QObject::connect(mUI->fileImportObjectDBAction, SIGNAL(triggered()), this, SLOT(fileImportObjectDB()));
   QObject::connect(mUI->fileEditSettingsAction, SIGNAL(triggered()), this, SLOT(fileEditSettings()));
   QObject::connect(mUI->fileSaveImageAction, SIGNAL(triggered()), this, SLOT(fileSaveImage()));
   QObject::connect(mUI->fileExitAction, SIGNAL(triggered()), this, SLOT(fileExit()));
@@ -364,6 +365,11 @@ void MainWindow::fileImportObject()
   "Graspit XML Files (*.xml*);;IV files (*.iv);;WRL files (*.wrl);;OFF files (*.off);;PLY files (*.ply)" ) );
 
   if ( !fn.isEmpty() ) world->importBody("GraspableBody",fn);
+}
+
+void MainWindow::fileImportObjectDB()
+{
+    std::cout << "Loading Database Object" << std::endl;
 }
 
 /*!
