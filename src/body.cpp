@@ -49,7 +49,8 @@
 #include "contact.h"
 #include "graspitGUI.h"
 #include "tinyxml.h"
-
+#include "fileDownloader.h"
+#include <QBuffer>
 #ifdef PLY_READER
 #include "mesh_loader.h"
 #endif
@@ -324,6 +325,127 @@ Body::loadFromXml(const TiXmlElement *root, QString rootPath)
 	return SUCCESS;
 }
 
+/*! Parses the root node of an XML structure containing information
+    for a body. It looks for all the relevant properties. Some of
+    the properties are optional and if they are not found, they will
+    be set to default values. Others will cause a failure if they
+    are not present.
+*/
+int
+Body::loadFromXmlBuffer(const TiXmlElement *root, QString rootPath)
+{
+    //material
+    const TiXmlElement* element = findXmlElement(root,"material");
+    QString valueStr;
+    if(element == NULL){
+        DBGA("No material type found; using default.");
+        material = myWorld->getMaterialIdx("wood");
+    } else {
+        valueStr = element->GetText();
+        if (!valueStr.isEmpty()) {
+            material = myWorld->getMaterialIdx(valueStr);
+            if (material==-1) {
+                QTWARNING("invalid material type in body file");
+                return FAILURE;
+            }
+        } else{
+            DBGA("No material type found; using default.");
+            material = myWorld->getMaterialIdx("wood");
+        }
+    }
+
+    //Young's modulus
+    element = findXmlElement(root,"youngs");
+    if(element) {
+        valueStr = element->GetText();
+        youngMod = valueStr.toDouble();
+        if (youngMod <= 0) {
+            QTWARNING("invalid Young's modulus in body file");
+            return FAILURE;
+        }
+        mIsElastic = true;
+    }
+
+    //Use Flock of Birds
+    element = findXmlElement(root,"useFlockOfBirds");
+    if(element){
+        valueStr = element->GetText();
+        mBirdNumber = valueStr.toDouble();
+        mUsesFlock = true;
+        DBGA("Object using Flock of Birds sensor " << mBirdNumber);
+    }
+
+    //load the geometry itself
+    element = findXmlElement(root,"geometryFile");
+    if (!element) {
+        QTWARNING("Geometry file information missing");
+        return FAILURE;
+    } else {
+        //the path in the file is relative to the body xml file
+        mGeometryFilename = element->GetText();
+        valueStr = rootPath + mGeometryFilename;
+        mGeometryFileType = element->Attribute("type");
+        //inventor is default
+        if (mGeometryFileType.isNull()||mGeometryFileType.isEmpty()) mGeometryFileType="Inventor";
+        int result;
+        if (mGeometryFileType=="Inventor") {
+            result = loadGeometryIV(valueStr);
+        } else if (mGeometryFileType=="off") {
+
+            std::cout << "loading from loadGeometryOFFBuffer" << std::endl;
+
+            result = loadGeometryOFFBuffer(valueStr);
+        } else if (mGeometryFileType=="ply") {
+            result = loadGeometryPLY(valueStr);
+        } else {
+            DBGA("Unknown geometry file type: " << mGeometryFileType.latin1());
+            result = FAILURE;
+        }
+        if (result == FAILURE) {
+            QTWARNING("Failed to open geometry file: " + valueStr);
+            return FAILURE;
+        }
+    }
+
+    //scaling of the geometry
+        IVScaleTran = new SoTransform;
+        IVScaleTran->scaleFactor.setValue(1.0, 1.0, 1.0);
+    element = findXmlElement(root,"geometryScaling");
+    if (element) {
+      valueStr = element->GetText();
+      double scale = valueStr.toDouble();
+      if (scale <= 0) {
+        DBGA("Scale geometry: negative scale found");
+        return FAILURE;
+      }
+      IVScaleTran->scaleFactor.setValue(scale, scale, scale);
+    }
+        IVGeomRoot->insertChild(IVScaleTran, 0);
+
+    //any offset to the geometry, inserted inside the geometry itself
+    //note that the offset gets added before the scale, so the offset is
+    //always expressed in graspit's units
+        IVOffsetTran = new SoTransform;
+        transf::IDENTITY.toSoTransform(IVOffsetTran);
+    element = findXmlElement(root,"geometryOffset");
+    if (element) {
+      const TiXmlElement* transformElement = findXmlElement(element,"transform");
+      if(!transformElement){
+        DBGA("Geometry offset field missing transform information");
+        return FAILURE;
+      }
+      transf offsetTran;
+      if(!getTransform(transformElement, offsetTran)){
+        DBGA("Geometry offset field: failed to parse transform");
+        return FAILURE;
+      }
+      offsetTran.toSoTransform(IVOffsetTran);
+    }
+        IVGeomRoot->insertChild(IVOffsetTran, 0);
+
+    return SUCCESS;
+}
+
 int
 Body::saveToXml(QTextStream& xml){
 	xml<<"\t\t\t<material>"<<myWorld->getMaterialName(material).latin1()<<"</material>"<<endl;
@@ -445,7 +567,7 @@ Body::loadFileBuffer(const QString &filename)
     }
     //the root path is the directory in which the xml file is placed
     QString root = xmlFilename.section('/',0,-2,QString::SectionIncludeTrailingSep);
-    if (loadFromXml(doc.RootElement(), root) != SUCCESS) {
+    if (loadFromXmlBuffer(doc.RootElement(), root) != SUCCESS) {
         return FAILURE;
     }
     //add material for controlling transparency
@@ -518,6 +640,78 @@ int OFFReadFailure() {
   return FAILURE;
 }
 
+/*! Loads the geometry of this object from an .off file. This was
+    primarily created for loading models from the Princeton Shape
+    Benchmark, allowing GraspIt to interact with the Columbia Grasp
+    Database.
+*/
+int
+Body::loadGeometryOFFBuffer(const QString& filename) {
+
+//  QString model_url = "http://borneo.cs.columbia.edu/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off";
+
+  QString model_url = "http://google.com";
+  QBuffer buffer;
+  FileDownloader *fileDownloader = new FileDownloader();
+  bool returnResult = fileDownloader->getBufferFromUrl(model_url, &buffer);
+  QByteArray qbytes = buffer.readAll();
+
+  char *data = qbytes.data();
+  while (*data) {
+      std::cout << "[" << *data << "]" << std::endl;
+      ++data;
+  }
+
+
+  ifstream file(filename.toStdString().c_str());
+  istringstream line;
+
+  // Skip the first line, which is always just "OFF"
+  if (!GetOffLine(&file, &line)) return OFFReadFailure();
+
+  // The header is the first line that isn't a comment (comments start with #)
+  // The header contains num_vertices and num_faces
+  if (!GetOffLine(&file, &line)) return OFFReadFailure();
+  long num_vertices, num_faces;
+  line >> num_vertices >> num_faces;
+  if (line.fail()) return OFFReadFailure();
+
+  SbVec3f* vertices = new SbVec3f[num_vertices];
+  std::vector<int32_t> face_indices;
+  // Read vertices
+  for (long vertex = 0; vertex < num_vertices; ++vertex) {
+    if (!GetOffLine(&file, &line)) return OFFReadFailure();
+    float x, y, z;
+    line >> x >> y >> z;
+    if (line.fail()) return OFFReadFailure();
+      vertices[vertex].setValue(x, y, z);
+  }
+  // Read faces into a vector
+  for (long face = 0; face < num_faces; ++face) {
+    if (!GetOffLine(&file, &line)) return OFFReadFailure();
+    int num_points, vertex_index;
+    line >> num_points;
+    // Read the points
+    for (int point = 0; point < num_points; ++point) {
+      line >> vertex_index;
+      face_indices.push_back(vertex_index);
+      // Triangulate the face as we go with a triangle fan and save the
+    }
+    if (line.fail()) return OFFReadFailure();
+    face_indices.push_back(SO_END_FACE_INDEX);
+  }
+
+    // Put everything into Coin geometry
+    SoCoordinate3* coords = new SoCoordinate3;
+    coords->point.setValues(0, num_vertices, vertices);
+    SoIndexedFaceSet* ifs = new SoIndexedFaceSet;
+    ifs->coordIndex.setValues(0, face_indices.size(), &(face_indices[0]));
+    this->IVGeomRoot->addChild(coords);
+    this->IVGeomRoot->addChild(ifs);
+
+    DBGA("OFF reader success");
+    return SUCCESS;
+}
 
 /*! Loads the geometry of this object from an .off file. This was 
 	primarily created for loading models from the Princeton Shape 

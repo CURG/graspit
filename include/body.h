@@ -198,11 +198,17 @@ public:
   //! Loads the body information from an XML structure
   virtual int loadFromXml(const TiXmlElement *root, QString rootPath);
 
+  //! Loads the body information from an XML structure
+  virtual int loadFromXmlBuffer(const TiXmlElement *root, QString rootPath);
+
   //! Loads the geometry of the body from an Inventor file that can be read by Coin (IV or VRML)
   int loadGeometryIV(const QString &filename);
 
   //! Loads the geometry of the body from an .off file
   int loadGeometryOFF(const QString &filename);
+
+  //! Loads the geometry of the body from an .off file buffer
+  int loadGeometryOFFBuffer(const QString &filename);
 
   //! Loads the geometry of the body from a .ply file
   int loadGeometryPLY(const QString &filename);

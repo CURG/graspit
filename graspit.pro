@@ -62,3 +62,4 @@ win32 {
 
 #------------------GraspIt! core files---------------------
 include(graspit-core.pro)
+

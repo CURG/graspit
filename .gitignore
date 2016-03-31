@@ -1,0 +1,9 @@
+*ui_*.h
+.moc
+.obj/
+Makefile
+bin/
+graspit.pro.user
+*~
+models/dev
+ui/qmake_image_collection.cpp
