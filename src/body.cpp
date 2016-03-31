@@ -400,6 +400,59 @@ Body::load(const QString &filename)
 	return SUCCESS;
 }
 
+
+int
+Body::loadFileBuffer(const QString &filename)
+{
+    QString fileType = filename.section('.',-1,-1);
+    QString xmlFilename;
+    if (fileType == "xml"){
+        //the file itself is XML
+        xmlFilename = filename;
+    } else {
+        //file is geometry; use default XML file
+        DBGA("Loading geometry file with boilerplate XML file");
+        xmlFilename = QString(getenv("GRASPIT")) + QString("/models/objects/default.xml");
+    }
+
+
+    myFilename = relativePath(filename, getenv("GRASPIT"));
+    if (myName.isEmpty() || myName == "unnamed") {
+        setName(filename.section('/',-1).section('.',0,0));
+    }
+
+    //load the graspit specific information in XML format
+    TiXmlDocument doc(xmlFilename);
+    if(doc.LoadFile()==false){
+        QTWARNING("Could not open " + xmlFilename);
+        return FAILURE;
+    }
+    if (fileType != "xml") {
+        //make geometry point at the right thing
+        QString relFilename = relativePath(filename, QString(getenv("GRASPIT")) +
+                           QString("/models/objects/"));
+        TiXmlElement * element = new TiXmlElement("geometryFile");
+        if (fileType=="iv" || fileType=="wrl") {
+            element->SetAttribute("type","Inventor");
+        } else if (fileType=="off") {
+            element->SetAttribute("type","off");
+        } else if (fileType=="ply") {
+            element->SetAttribute("type","ply");
+        }
+        TiXmlText * text = new TiXmlText( relFilename );
+        element->LinkEndChild(text);
+        doc.RootElement()->LinkEndChild(element);
+    }
+    //the root path is the directory in which the xml file is placed
+    QString root = xmlFilename.section('/',0,-2,QString::SectionIncludeTrailingSep);
+    if (loadFromXml(doc.RootElement(), root) != SUCCESS) {
+        return FAILURE;
+    }
+    //add material for controlling transparency
+    addIVMat();
+    return SUCCESS;
+}
+
 /*! Loads only the geometry part of this object, without any other 
     GraspIt specific information such as mass, material etc. The file
     must be in a format that is readable by Coin, which for now means

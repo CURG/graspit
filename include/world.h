@@ -352,6 +352,9 @@ public:
   //! Creates a new body of type \a bodyType, then calls the load routine of that body
   Body *importBody(QString bodyType,QString filename);
 
+  //! Creates a new body of type \a bodyType, then calls the load routine of that body from file buffer
+  Body *importBodyFromBuffer(QString bodyType,QString filename);
+
   //! Creates a new body of type \a bodyType, then calls the loadFromXml routine of that body
   Body *importBodyFromXml(QString bodyType, const TiXmlElement* child, QString rootPath);
 

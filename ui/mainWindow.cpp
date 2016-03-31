@@ -369,7 +369,14 @@ void MainWindow::fileImportObject()
 
 void MainWindow::fileImportObjectDB()
 {
+
     std::cout << "Loading Database Object" << std::endl;
+
+    QString fn( QFileDialog::getOpenFileName(mWindow, QString(),
+                                             QString(getenv("GRASPIT"))+QString("/models/objects"),
+    "Graspit XML Files (*.xml*);;IV files (*.iv);;WRL files (*.wrl);;OFF files (*.off);;PLY files (*.ply)" ) );
+
+    if ( !fn.isEmpty() ) world->importBodyFromBuffer("GraspableBody",fn);
 }
 
 /*!

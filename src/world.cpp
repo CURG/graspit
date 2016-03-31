@@ -858,6 +858,23 @@ World::importBody(QString bodyType,QString filename)
   return newBody;
 }
 
+/*! Imports a body which is loaded from a file. \bodyType must be a class name
+from the Body hierarchy (e.g. "Body", "DynamicBody", etc). \a filename is
+the complete path to the file containing the body. The new body is created,
+loaded from the file, initialized, and added to the collision detection and
+scene graph.
+*/
+Body *
+World::importBodyFromBuffer(QString bodyType, QString filename)
+{
+  Body *newBody = (Body *) getWorldElementFactory().createElement(bodyType.toStdString(), this, NULL);
+  if (!newBody) return NULL;
+  if (newBody->loadFileBuffer(filename)==FAILURE) return NULL;
+  newBody->addToIvc();
+  addBody(newBody);
+  return newBody;
+}
+
 /*! Imports a body which is loaded from a xml file. \bodyType must be a class name 
 from the Body hierarchy (e.g. "Body", "DynamicBody", etc). \a rootPath and \a  
 child are parsed to loadFromXml. The new body is created, loaded from the 
