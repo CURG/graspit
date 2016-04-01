@@ -685,19 +685,12 @@ Body::loadGeometryOFFBuffer(const QString& filename) {
 
 
   SyncHTTP h("borneo.cs.columbia.edu");
-
+  QString url_path = "/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/airplane/d18592d9615b01bbbc0909d98a1ff2b4/d18592d9615b01bbbc0909d98a1ff2b4.off";
   //prepare output buffer
   QBuffer getOutput;
-  h.syncGet( "/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off",&getOutput);
+  h.syncGet(url_path,&getOutput);
 
   getOutput.open(QIODevice::ReadWrite);
-//  while(getOutput.canReadLine()) {
-
-//      std::cout << QString(getOutput.readLine()).toStdString() << std::endl;
-
-//  }
-
-
   istringstream line;
 
   // Skip the first line, which is always just "OFF"
