@@ -635,6 +635,26 @@ bool GetOffLine(ifstream* file, istringstream* line)
   return GetOffLine(file, line);
 }
 
+
+//! Helper for loadGeometryOff
+/*! Strips off leading whitespace and comments */
+bool GetOfflineQBuffer(QBuffer* qBuffer, istringstream* line)
+{
+    string buffer;
+    if (!(*qBuffer).canReadLine()) return false;
+    buffer = QString((*qBuffer).readLine()).toStdString();
+    // remove comments and leading whitespace
+    buffer = buffer.substr(buffer.find_first_not_of(" \t\n\f\r"),
+                           buffer.find_first_of("#"));
+    if (!buffer.empty()) {
+      line->clear();
+      line->str(buffer);
+      return true;
+    }
+    return GetOfflineQBuffer(qBuffer, line);
+}
+
+
 //! Helper for loadGeometryOFF
 int OFFReadFailure() {
   DBGA("OFF reader failure");
@@ -671,23 +691,21 @@ Body::loadGeometryOFFBuffer(const QString& filename) {
   h.syncGet( "/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off",&getOutput);
 
   getOutput.open(QIODevice::ReadWrite);
-  while(getOutput.canReadLine()) {
+//  while(getOutput.canReadLine()) {
 
-      std::cout << QString(getOutput.readLine()).toStdString() << std::endl;
+//      std::cout << QString(getOutput.readLine()).toStdString() << std::endl;
 
-  }
+//  }
 
 
-
-  ifstream file(filename.toStdString().c_str());
   istringstream line;
 
   // Skip the first line, which is always just "OFF"
-  if (!GetOffLine(&file, &line)) return OFFReadFailure();
+  if (!GetOfflineQBuffer(&getOutput, &line)) return OFFReadFailure();
 
   // The header is the first line that isn't a comment (comments start with #)
   // The header contains num_vertices and num_faces
-  if (!GetOffLine(&file, &line)) return OFFReadFailure();
+  if (!GetOfflineQBuffer(&getOutput, &line)) return OFFReadFailure();
   long num_vertices, num_faces;
   line >> num_vertices >> num_faces;
   if (line.fail()) return OFFReadFailure();
@@ -696,7 +714,7 @@ Body::loadGeometryOFFBuffer(const QString& filename) {
   std::vector<int32_t> face_indices;
   // Read vertices
   for (long vertex = 0; vertex < num_vertices; ++vertex) {
-    if (!GetOffLine(&file, &line)) return OFFReadFailure();
+    if (!GetOfflineQBuffer(&getOutput, &line)) return OFFReadFailure();
     float x, y, z;
     line >> x >> y >> z;
     if (line.fail()) return OFFReadFailure();
@@ -704,7 +722,7 @@ Body::loadGeometryOFFBuffer(const QString& filename) {
   }
   // Read faces into a vector
   for (long face = 0; face < num_faces; ++face) {
-    if (!GetOffLine(&file, &line)) return OFFReadFailure();
+    if (!GetOfflineQBuffer(&getOutput, &line)) return OFFReadFailure();
     int num_points, vertex_index;
     line >> num_points;
     // Read the points
