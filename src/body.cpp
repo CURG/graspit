@@ -51,6 +51,7 @@
 #include "tinyxml.h"
 #include "fileDownloader.h"
 #include <QBuffer>
+#include <QIODevice>
 #ifdef PLY_READER
 #include "mesh_loader.h"
 #endif
@@ -648,19 +649,34 @@ int OFFReadFailure() {
 int
 Body::loadGeometryOFFBuffer(const QString& filename) {
 
-//  QString model_url = "http://borneo.cs.columbia.edu/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off";
+  QString model_url = "http://borneo.cs.columbia.edu/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off";
 
-  QString model_url = "http://google.com";
-  QBuffer buffer;
-  FileDownloader *fileDownloader = new FileDownloader();
-  bool returnResult = fileDownloader->getBufferFromUrl(model_url, &buffer);
-  QByteArray qbytes = buffer.readAll();
+//  QString model_url = "http://google.com";
+//  QBuffer buffer;
+//  FileDownloader *fileDownloader = new FileDownloader();
+//  bool returnResult = fileDownloader->getBufferFromUrl(model_url, &buffer);
+//  QByteArray qbytes = buffer.readAll();
 
-  char *data = qbytes.data();
-  while (*data) {
-      std::cout << "[" << *data << "]" << std::endl;
-      ++data;
+//  char *data = qbytes.data();
+//  while (*data) {
+//      std::cout << "[" << *data << "]" << std::endl;
+//      ++data;
+//  }
+
+
+  SyncHTTP h("borneo.cs.columbia.edu");
+
+  //prepare output buffer
+  QBuffer getOutput;
+  h.syncGet( "/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off",&getOutput);
+
+  getOutput.open(QIODevice::ReadWrite);
+  while(getOutput.canReadLine()) {
+
+      std::cout << QString(getOutput.readLine()).toStdString() << std::endl;
+
   }
+
 
 
   ifstream file(filename.toStdString().c_str());
