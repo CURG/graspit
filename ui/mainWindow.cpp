@@ -65,6 +65,7 @@
 #include "gfoDlg.h"
 #include "contactExaminerDlg.h"
 #include "egPlannerDlg.h"
+#include "dbModelLoaderDlg.h"
 #ifdef CGDB_ENABLED
 #include "DBase/dbaseDlg.h"
 #include "DBase/dbasePlannerDlg.h"
@@ -372,11 +373,17 @@ void MainWindow::fileImportObjectDB()
 
     std::cout << "Loading Database Object" << std::endl;
 
-    QString fn( QFileDialog::getOpenFileName(mWindow, QString(),
-                                             QString(getenv("GRASPIT"))+QString("/models/objects"),
-    "Graspit XML Files (*.xml*);;IV files (*.iv);;WRL files (*.wrl);;OFF files (*.off);;PLY files (*.ply)" ) );
+    DbModelLoaderDlg *dlg = new DbModelLoaderDlg(mWindow);
+    dlg->setMembers(world);
+    dlg->setAttribute(Qt::WA_ShowModal, false);
+    dlg->setAttribute(Qt::WA_DeleteOnClose, true);
+    dlg->show();
 
-    if ( !fn.isEmpty() ) world->importBodyFromBuffer("GraspableBody",fn);
+//    QString fn( QFileDialog::getOpenFileName(mWindow, QString(),
+//                                             QString(getenv("GRASPIT"))+QString("/models/objects"),
+//    "Graspit XML Files (*.xml*);;IV files (*.iv);;WRL files (*.wrl);;OFF files (*.off);;PLY files (*.ply)" ) );
+
+
 }
 
 /*!
