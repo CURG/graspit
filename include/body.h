@@ -190,16 +190,13 @@ public:
   virtual int load(const QString &filename);
 
   //! Load the body information from a file buffer (Dev: it is just functioning like load() for now)
-  virtual int loadFileBuffer(const QString &filename);
+  virtual int loadFileBuffer(const QString &filename, const int material_idx);
   
   //! Convert the body information to xml and link the xml to the given geometry file
   int convert2xml(QString filename);
   
   //! Loads the body information from an XML structure
   virtual int loadFromXml(const TiXmlElement *root, QString rootPath);
-
-  //! Loads the body information from an XML structure
-  virtual int loadFromXmlBuffer(const TiXmlElement *root, QString rootPath);
 
   //! Loads the geometry of the body from an Inventor file that can be read by Coin (IV or VRML)
   int loadGeometryIV(const QString &filename);

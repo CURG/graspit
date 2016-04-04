@@ -869,7 +869,7 @@ World::importBodyFromBuffer(QString bodyType, QString filename)
 {
   Body *newBody = (Body *) getWorldElementFactory().createElement(bodyType.toStdString(), this, NULL);
   if (!newBody) return NULL;
-  if (newBody->loadFileBuffer(filename)==FAILURE) return NULL;
+  if (newBody->loadFileBuffer(filename, getMaterialIdx("rubber"))==FAILURE) return NULL;
   newBody->addToIvc();
   addBody(newBody);
   return newBody;

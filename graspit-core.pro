@@ -242,7 +242,9 @@ FORMS += ui/mainWindow.ui \
 	ui/settingsDlg.ui \
 	ui/Planner/plannerdlg.ui \
 	ui/EGPlanner/egPlannerDlg.ui \
-	ui/EGPlanner/compliantPlannerDlg.ui
+        ui/EGPlanner/compliantPlannerDlg.ui \
+        ui/dbModelLoaderDlg.ui
+
 
 HEADERS += ui/mainWindow.h \
 	ui/archBuilderDlg.h \
@@ -258,7 +260,8 @@ HEADERS += ui/mainWindow.h \
 	ui/qmDlg.h \
 	ui/Planner/plannerdlg.h \
 	ui/EGPlanner/egPlannerDlg.h \
-	ui/EGPlanner/compliantPlannerDlg.h
+        ui/EGPlanner/compliantPlannerDlg.h \
+        ui/dbModelLoaderDlg.h
 
 
 SOURCES += ui/mainWindow.cpp \
@@ -275,7 +278,8 @@ SOURCES += ui/mainWindow.cpp \
 	ui/settingsDlg.cpp \
 	ui/Planner/plannerdlg.cpp \
 	ui/EGPlanner/egPlannerDlg.cpp \
-	ui/EGPlanner/compliantPlannerDlg.cpp
+        ui/EGPlanner/compliantPlannerDlg.cpp \
+        ui/dbModelLoaderDlg.cpp
 
 #-------------------------------------- images and resources -------------------------------------------------------
 

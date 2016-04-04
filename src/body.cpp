@@ -326,127 +326,6 @@ Body::loadFromXml(const TiXmlElement *root, QString rootPath)
 	return SUCCESS;
 }
 
-/*! Parses the root node of an XML structure containing information
-    for a body. It looks for all the relevant properties. Some of
-    the properties are optional and if they are not found, they will
-    be set to default values. Others will cause a failure if they
-    are not present.
-*/
-int
-Body::loadFromXmlBuffer(const TiXmlElement *root, QString rootPath)
-{
-    //material
-    const TiXmlElement* element = findXmlElement(root,"material");
-    QString valueStr;
-    if(element == NULL){
-        DBGA("No material type found; using default.");
-        material = myWorld->getMaterialIdx("wood");
-    } else {
-        valueStr = element->GetText();
-        if (!valueStr.isEmpty()) {
-            material = myWorld->getMaterialIdx(valueStr);
-            if (material==-1) {
-                QTWARNING("invalid material type in body file");
-                return FAILURE;
-            }
-        } else{
-            DBGA("No material type found; using default.");
-            material = myWorld->getMaterialIdx("wood");
-        }
-    }
-
-    //Young's modulus
-    element = findXmlElement(root,"youngs");
-    if(element) {
-        valueStr = element->GetText();
-        youngMod = valueStr.toDouble();
-        if (youngMod <= 0) {
-            QTWARNING("invalid Young's modulus in body file");
-            return FAILURE;
-        }
-        mIsElastic = true;
-    }
-
-    //Use Flock of Birds
-    element = findXmlElement(root,"useFlockOfBirds");
-    if(element){
-        valueStr = element->GetText();
-        mBirdNumber = valueStr.toDouble();
-        mUsesFlock = true;
-        DBGA("Object using Flock of Birds sensor " << mBirdNumber);
-    }
-
-    //load the geometry itself
-    element = findXmlElement(root,"geometryFile");
-    if (!element) {
-        QTWARNING("Geometry file information missing");
-        return FAILURE;
-    } else {
-        //the path in the file is relative to the body xml file
-        mGeometryFilename = element->GetText();
-        valueStr = rootPath + mGeometryFilename;
-        mGeometryFileType = element->Attribute("type");
-        //inventor is default
-        if (mGeometryFileType.isNull()||mGeometryFileType.isEmpty()) mGeometryFileType="Inventor";
-        int result;
-        if (mGeometryFileType=="Inventor") {
-            result = loadGeometryIV(valueStr);
-        } else if (mGeometryFileType=="off") {
-
-            std::cout << "loading from loadGeometryOFFBuffer" << std::endl;
-
-            result = loadGeometryOFFBuffer(valueStr);
-        } else if (mGeometryFileType=="ply") {
-            result = loadGeometryPLY(valueStr);
-        } else {
-            DBGA("Unknown geometry file type: " << mGeometryFileType.latin1());
-            result = FAILURE;
-        }
-        if (result == FAILURE) {
-            QTWARNING("Failed to open geometry file: " + valueStr);
-            return FAILURE;
-        }
-    }
-
-    //scaling of the geometry
-        IVScaleTran = new SoTransform;
-        IVScaleTran->scaleFactor.setValue(1.0, 1.0, 1.0);
-    element = findXmlElement(root,"geometryScaling");
-    if (element) {
-      valueStr = element->GetText();
-      double scale = valueStr.toDouble();
-      if (scale <= 0) {
-        DBGA("Scale geometry: negative scale found");
-        return FAILURE;
-      }
-      IVScaleTran->scaleFactor.setValue(scale, scale, scale);
-    }
-        IVGeomRoot->insertChild(IVScaleTran, 0);
-
-    //any offset to the geometry, inserted inside the geometry itself
-    //note that the offset gets added before the scale, so the offset is
-    //always expressed in graspit's units
-        IVOffsetTran = new SoTransform;
-        transf::IDENTITY.toSoTransform(IVOffsetTran);
-    element = findXmlElement(root,"geometryOffset");
-    if (element) {
-      const TiXmlElement* transformElement = findXmlElement(element,"transform");
-      if(!transformElement){
-        DBGA("Geometry offset field missing transform information");
-        return FAILURE;
-      }
-      transf offsetTran;
-      if(!getTransform(transformElement, offsetTran)){
-        DBGA("Geometry offset field: failed to parse transform");
-        return FAILURE;
-      }
-      offsetTran.toSoTransform(IVOffsetTran);
-    }
-        IVGeomRoot->insertChild(IVOffsetTran, 0);
-
-    return SUCCESS;
-}
-
 int
 Body::saveToXml(QTextStream& xml){
 	xml<<"\t\t\t<material>"<<myWorld->getMaterialName(material).latin1()<<"</material>"<<endl;
@@ -525,7 +404,7 @@ Body::load(const QString &filename)
 
 
 int
-Body::loadFileBuffer(const QString &filename)
+Body::loadFileBuffer(const QString &filename, const int material_idx)
 {
 
     std::cout << "loading from loadGeometryOFFBuffer" << std::endl;
@@ -535,6 +414,8 @@ Body::loadFileBuffer(const QString &filename)
     if (result != SUCCESS) {
         return FAILURE;
     }
+
+    setMaterial(material_idx);
     //add material for controlling transparency
     addIVMat();
     return SUCCESS;
