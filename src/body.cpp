@@ -527,48 +527,12 @@ Body::load(const QString &filename)
 int
 Body::loadFileBuffer(const QString &filename)
 {
-    QString fileType = filename.section('.',-1,-1);
-    QString xmlFilename;
-    if (fileType == "xml"){
-        //the file itself is XML
-        xmlFilename = filename;
-    } else {
-        //file is geometry; use default XML file
-        DBGA("Loading geometry file with boilerplate XML file");
-        xmlFilename = QString(getenv("GRASPIT")) + QString("/models/objects/default.xml");
-    }
 
+    std::cout << "loading from loadGeometryOFFBuffer" << std::endl;
 
-    myFilename = relativePath(filename, getenv("GRASPIT"));
-    if (myName.isEmpty() || myName == "unnamed") {
-        setName(filename.section('/',-1).section('.',0,0));
-    }
+    int result = loadGeometryOFFBuffer(filename);
 
-    //load the graspit specific information in XML format
-    TiXmlDocument doc(xmlFilename);
-    if(doc.LoadFile()==false){
-        QTWARNING("Could not open " + xmlFilename);
-        return FAILURE;
-    }
-    if (fileType != "xml") {
-        //make geometry point at the right thing
-        QString relFilename = relativePath(filename, QString(getenv("GRASPIT")) +
-                           QString("/models/objects/"));
-        TiXmlElement * element = new TiXmlElement("geometryFile");
-        if (fileType=="iv" || fileType=="wrl") {
-            element->SetAttribute("type","Inventor");
-        } else if (fileType=="off") {
-            element->SetAttribute("type","off");
-        } else if (fileType=="ply") {
-            element->SetAttribute("type","ply");
-        }
-        TiXmlText * text = new TiXmlText( relFilename );
-        element->LinkEndChild(text);
-        doc.RootElement()->LinkEndChild(element);
-    }
-    //the root path is the directory in which the xml file is placed
-    QString root = xmlFilename.section('/',0,-2,QString::SectionIncludeTrailingSep);
-    if (loadFromXmlBuffer(doc.RootElement(), root) != SUCCESS) {
+    if (result != SUCCESS) {
         return FAILURE;
     }
     //add material for controlling transparency
@@ -667,10 +631,13 @@ int OFFReadFailure() {
     Database.
 */
 int
-Body::loadGeometryOFFBuffer(const QString& filename) {
+Body::loadGeometryOFFBuffer(const QString& url) {
 
   QString model_url = "http://borneo.cs.columbia.edu/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off";
+//  QUrl original(model_url);
 
+//  std::cout <<original.host << std::endl;
+//  std::cout <<original.path << std::endl;
 //  QString model_url = "http://google.com";
 //  QBuffer buffer;
 //  FileDownloader *fileDownloader = new FileDownloader();
@@ -685,8 +652,8 @@ Body::loadGeometryOFFBuffer(const QString& filename) {
 
 
   SyncHTTP h("borneo.cs.columbia.edu");
-  QString url_path = "/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/airplane/d18592d9615b01bbbc0909d98a1ff2b4/d18592d9615b01bbbc0909d98a1ff2b4.off";
-  //prepare output buffer
+  QString url_path = "/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/american_flag/american_flag_000000045/american_flag_000000045.off";
+  // Prepare output buffer
   QBuffer getOutput;
   h.syncGet(url_path,&getOutput);
 
