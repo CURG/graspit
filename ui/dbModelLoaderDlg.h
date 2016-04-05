@@ -6,6 +6,7 @@
 class World;
 class DbModelLoaderDlg : public QDialog, public Ui::DbModelLoaderDlgUI
 {
+    Q_OBJECT
 private:
 	void init();
     World *world;
