@@ -189,6 +189,27 @@ else{
     SOURCES += src/main.cpp
 }
 
+#--------------------------------------- Implementations of the Qt5 JSON Parser ---------------------------------
+INCLUDEPATH += qjson4
+DEPENDPATH += qjson4
+
+HEADERS += qjson4/QJsonArray.h        \
+           qjson4/QJsonDocument.h     \
+           qjson4/QJsonObject.h       \
+           qjson4/QJsonParseError.h   \
+           qjson4/QJsonValue.h        \
+           qjson4/QJsonValueRef.h     \
+		   qjson4/QJsonParser.h       \
+		   qjson4/QJsonRoot.h         
+
+SOURCES += qjson4/QJsonArray.cpp      \
+           qjson4/QJsonDocument.cpp   \
+           qjson4/QJsonObject.cpp     \
+           qjson4/QJsonParseError.cpp \
+           qjson4/QJsonValue.cpp      \
+           qjson4/QJsonValueRef.cpp   \
+		   qjson4/QJsonParser.cpp     
+
 #--------------------------------------- Implementations of the collision interface ---------------------------------
 
 pqp_collision {

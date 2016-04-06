@@ -1,0 +1,7 @@
+
+TEMPLATE = app
+TARGET   = test
+DEPENDPATH  += .
+INCLUDEPATH += .
+
+

@@ -13,72 +13,98 @@
   <property name="windowTitle">
    <string>Arch Builder</string>
   </property>
-  <widget class="QLabel" name="textLabel1">
+  <widget class="QLabel" name="categoriesLabel">
    <property name="geometry">
     <rect>
-     <x>10</x>
+     <x>40</x>
      <y>70</y>
-     <width>70</width>
+     <width>91</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>e555r</string>
+    <string>Categories</string>
    </property>
    <property name="wordWrap">
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QLabel" name="textLabel2">
+  <widget class="QLabel" name="loadModelTitle">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>40</y>
-     <width>70</width>
+     <x>230</x>
+     <y>10</y>
+     <width>261</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>Outer radius</string>
+    <string>Load Models From DB</string>
    </property>
    <property name="wordWrap">
     <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="innerRadiusEdit">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>70</y>
-     <width>71</width>
-     <height>21</height>
-    </rect>
    </property>
   </widget>
   <widget class="QPushButton" name="loadButton">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>170</y>
-     <width>70</width>
-     <height>30</height>
+     <x>240</x>
+     <y>140</y>
+     <width>171</width>
+     <height>51</height>
     </rect>
    </property>
    <property name="text">
     <string>Load</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="cancelButton">
+  <widget class="QLabel" name="modelsLabel">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>170</y>
+     <x>300</x>
+     <y>70</y>
      <width>70</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Models</string>
+   </property>
+   <property name="wordWrap">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="categoriesComboBox">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>70</y>
+     <width>141</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="modelsComboBox">
+   <property name="geometry">
+    <rect>
+     <x>370</x>
+     <y>70</y>
+     <width>141</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="nextPageModelsButton">
+   <property name="geometry">
+    <rect>
+     <x>520</x>
+     <y>70</y>
+     <width>81</width>
      <height>31</height>
     </rect>
    </property>
    <property name="text">
-    <string>Cancel</string>
+    <string>Next Page</string>
    </property>
   </widget>
  </widget>
@@ -91,22 +117,6 @@
    <signal>clicked()</signal>
    <receiver>DbModelLoaderDlgUI</receiver>
    <slot>loadButton_clicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>cancelButton</sender>
-   <signal>clicked()</signal>
-   <receiver>DbModelLoaderDlgUI</receiver>
-   <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>20</x>

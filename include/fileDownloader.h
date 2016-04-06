@@ -8,6 +8,7 @@
 #include <Q3Http>
 #include <QEventLoop>
 #include <QBuffer>
+#include <iostream>
 
 /**
  * Provide a synchronous api over Q3Http
@@ -37,7 +38,24 @@ class SyncHTTP: public Q3Http
             /// block until the request is finished
             loop.exec();
             /// return the request status
+            (*to).open(QIODevice::ReadWrite);
             return status;
+        }
+
+        bool syncGetQString(const QString & path, QString & resultStr) {
+
+            QBuffer output;
+            bool status = syncGet(path,&output);
+            if (status == true) {
+                output.open(QIODevice::ReadWrite);
+                QByteArray bytes = output.readAll();
+                resultStr = QString(bytes);
+                std::cout << "resultStr: " << resultStr.toStdString().c_str() << std::endl;
+                return true;
+            } else {
+                std::cout << "FAILLLLLLL" << std::endl;
+                return status;
+            }
         }
 
         /// send POST request and wait until finished
