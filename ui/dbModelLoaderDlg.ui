@@ -119,8 +119,8 @@
    <slot>loadButton_clicked()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>20</x>
-     <y>20</y>
+     <x>250</x>
+     <y>140</y>
     </hint>
     <hint type="destinationlabel">
      <x>20</x>
@@ -128,8 +128,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>categoriesComboBox</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>DbModelLoaderDlgUI</receiver>
+   <slot>categoryComboBox_clicked(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>200</x>
+     <y>83</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>314</x>
+     <y>118</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>loadButton_clicked()</slot>
+  <slot>categoryComboBox_clicked(QString)</slot>
  </slots>
 </ui>

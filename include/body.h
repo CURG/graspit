@@ -190,7 +190,7 @@ public:
   virtual int load(const QString &filename);
 
   //! Load the body information from a file buffer (Dev: it is just functioning like load() for now)
-  virtual int loadFileBuffer(const QString &filename, const int material_idx);
+  virtual int loadFileBuffer(const QString &url, const int material_idx);
   
   //! Convert the body information to xml and link the xml to the given geometry file
   int convert2xml(QString filename);

@@ -5,7 +5,7 @@
 #include <QDialog>
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
-
+#include <QJsonObject.h>
 class World;
 class DbModelLoaderDlg : public QDialog, public Ui::DbModelLoaderDlgUI
 {
@@ -13,30 +13,24 @@ class DbModelLoaderDlg : public QDialog, public Ui::DbModelLoaderDlgUI
 private:
 	void init();
     World *world;
+    QJsonObject models;
 protected:
     void setCategories();
+    void setModels(const QString &category);
+    void loadModel(const QString &modelName);
 public:
 
     DbModelLoaderDlg(QWidget *parent) : QDialog(parent), world(NULL){
 		setupUi(this);
         init();
         setCategories();
-//        QString url = QString("http://borneo.cs.columbia.edu:8080/models/metas/category?access_token=robolabapi");
-//        QUrl httpRequest(url);
-//        QNetworkRequest request;
-//        QNetworkReply *reply = request.
-//                sendRequest(httpRequest);
-//        connect(reply, SIGNAL(finished()), this, SLOT(setCategories(QNetworkReply));
 
-
-//        setCategories();
-//        this->categoriesComboBox->addItems(
-//        this->OKButton->
 	}
 
     void setMembers(World *_world);
 public Q_SLOTS:
     void loadButton_clicked();
+    void categoryComboBox_clicked(const QString &category);
 
 };
 

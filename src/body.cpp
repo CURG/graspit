@@ -36,6 +36,7 @@
 #include <QFile>
 #include <QString>
 #include <QTextStream>
+#include <QUrl>
 
 #include "body.h"
 #include "collisionInterface.h"
@@ -404,12 +405,12 @@ Body::load(const QString &filename)
 
 
 int
-Body::loadFileBuffer(const QString &filename, const int material_idx)
+Body::loadFileBuffer(const QString &url, const int material_idx)
 {
 
     std::cout << "loading from loadGeometryOFFBuffer" << std::endl;
 
-    int result = loadGeometryOFFBuffer(filename);
+    int result = loadGeometryOFFBuffer(url);
 
     if (result != SUCCESS) {
         return FAILURE;
@@ -514,29 +515,13 @@ int OFFReadFailure() {
 int
 Body::loadGeometryOFFBuffer(const QString& url) {
 
-  QString model_url = "http://borneo.cs.columbia.edu/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off";
-//  QUrl original(model_url);
-
-//  std::cout <<original.host << std::endl;
-//  std::cout <<original.path << std::endl;
-//  QString model_url = "http://google.com";
-//  QBuffer buffer;
-//  FileDownloader *fileDownloader = new FileDownloader();
-//  bool returnResult = fileDownloader->getBufferFromUrl(model_url, &buffer);
-//  QByteArray qbytes = buffer.readAll();
-
-//  char *data = qbytes.data();
-//  while (*data) {
-//      std::cout << "[" << *data << "]" << std::endl;
-//      ++data;
-//  }
-
-
-  SyncHTTP h("borneo.cs.columbia.edu");
-  QString url_path = "/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/american_flag/american_flag_000000045/american_flag_000000045.off";
+  QString sample_url = "http://borneo.cs.columbia.edu/modelnet/vision.cs.princeton.edu/projects/2014/ModelNet/data/aircraft/829c8a31c64a5d67ba0d990ae229b477/829c8a31c64a5d67ba0d990ae229b477.off";
+  QUrl model_url(url);
+  SyncHTTP h(model_url.host());
+  QString url_path = model_url.path();
   // Prepare output buffer
   QBuffer getOutput;
-  h.syncGet(url_path,&getOutput);
+  h.syncGet(url_path, &getOutput);
 
   getOutput.open(QIODevice::ReadWrite);
   istringstream line;

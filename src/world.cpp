@@ -865,11 +865,11 @@ loaded from the file, initialized, and added to the collision detection and
 scene graph.
 */
 Body *
-World::importBodyFromBuffer(QString bodyType, QString filename)
+World::importBodyFromBuffer(QString bodyType, QString url)
 {
   Body *newBody = (Body *) getWorldElementFactory().createElement(bodyType.toStdString(), this, NULL);
   if (!newBody) return NULL;
-  if (newBody->loadFileBuffer(filename, getMaterialIdx("rubber"))==FAILURE) return NULL;
+  if (newBody->loadFileBuffer(url, getMaterialIdx("rubber"))==FAILURE) return NULL;
   newBody->addToIvc();
   addBody(newBody);
   return newBody;
