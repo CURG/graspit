@@ -3,6 +3,7 @@
 #include <QValidator>
 #include <QString>
 #include <world.h>
+#include <body.h>
 #include <fileDownloader.h>
 
 #include "qjson4/QJsonArray.h"
@@ -32,12 +33,33 @@ void DbModelLoaderDlg::loadButton_clicked() {
     world = _world;
  }
 
+ void DbModelLoaderDlg::setEnv() {
+     apiUrl = getenv("API_URL");
+     if(apiUrl == "") {
+         std::cout << "Setting API_URL to default borneo.cs.columbia.edu:8080" << std::endl;
+         apiUrl = "borneo.cs.columbia.edu";
+         apiPort = 8080;
+     } else {
+
+         QUrl url(apiUrl);
+         apiUrl = url.host();
+         apiPort = url.port();
+         if(apiPort <= 0){
+             apiPort = 80;
+
+         }
+
+
+     }
+
+     apiKey = getenv("API_KEY");
+}
 
  void DbModelLoaderDlg::setCategories() {
 
      QStringList categories;
-     SyncHTTP h("borneo.cs.columbia.edu", 8080);
-     QString url_path = "/models/metas/category?access_token=robolabapi";
+     SyncHTTP h(apiUrl, apiPort);
+     QString url_path = "/models/metas/category?access_token=" + apiKey;
 
      QBuffer output;
      bool status = h.syncGet(url_path,&output);
@@ -84,8 +106,8 @@ void DbModelLoaderDlg::loadButton_clicked() {
 //     models = NULL;
      models = QJsonObject();
 
-     SyncHTTP h("borneo.cs.columbia.edu", 8080);
-     QString url_path = "/models?category=" + category + "&access_token=robolabapi";
+     SyncHTTP h(apiUrl, apiPort);
+     QString url_path = "/models?category=" + category + "&access_token=" + apiKey;
 
      QBuffer output;
      bool status = h.syncGet(url_path,&output);
@@ -133,5 +155,7 @@ void DbModelLoaderDlg::loadButton_clicked() {
      QString url = models[modelName].toString();
 
     std::cout << url.toStdString().c_str() << std::endl;
-     world->importBodyFromBuffer("GraspableBody", url);
+     Body *b = world->importBodyFromBuffer("GraspableBody", url);
+     //b->getIVScaleTran()
+     //b->setGeometryScaling(1000,1000,1000);
  }

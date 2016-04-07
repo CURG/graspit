@@ -6,6 +6,9 @@
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
 #include <QJsonObject.h>
+#include <iostream>
+#include <QUrl>
+
 class World;
 class DbModelLoaderDlg : public QDialog, public Ui::DbModelLoaderDlgUI
 {
@@ -14,7 +17,11 @@ private:
 	void init();
     World *world;
     QJsonObject models;
+    QString apiUrl;
+    QString apiKey;
+    int apiPort;
 protected:
+    void setEnv();
     void setCategories();
     void setModels(const QString &category);
     void loadModel(const QString &modelName);
@@ -23,6 +30,7 @@ public:
     DbModelLoaderDlg(QWidget *parent) : QDialog(parent), world(NULL){
 		setupUi(this);
         init();
+        setEnv();
         setCategories();
 
 	}
