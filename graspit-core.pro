@@ -106,6 +106,7 @@ HEADERS	+= include/body.h \
 	include/robots/barrett.h \
 	include/FitParabola.h \
         include/graspitParser.h \
+        include/dbModelLoader.h \
         include/fileDownloader.h
 
 SOURCES	+= src/arch.cpp \
@@ -181,7 +182,8 @@ SOURCES	+= src/arch.cpp \
 	src/robots/m7tool.cpp \
 	src/robots/robonaut.cpp \
 	src/robots/barrett.cpp \
-        src/graspitParser.cpp
+        src/graspitParser.cpp \
+        src/dbModelLoader.cpp
 
 graspit_test{
 }
