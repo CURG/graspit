@@ -57,45 +57,7 @@ void DbModelLoaderDlg::loadButton_clicked() {
 
  void DbModelLoaderDlg::setCategories() {
 
-     QStringList categories;
-     SyncHTTP h(apiUrl, apiPort);
-     QString url_path = "/models/metas/category?access_token=" + apiKey;
-
-     QBuffer output;
-     bool status = h.syncGet(url_path,&output);
-     if(!status)
-     {
-         return;
-     }
-
-     QByteArray bytes = output.readAll();
-
-     QJsonParseError error;
-     QJsonDocument doc = QJsonDocument::fromJson(bytes, &error);
-     QJsonArray arr;
-
-     // check validity of the document
-     if(!doc.isNull())
-     {
-         if(doc.isArray())
-         {
-             arr = doc.array();
-         }
-         else
-         {
-             std::cout  << "Document is not an array" << std::endl;
-         }
-     }
-     else
-     {
-        std::cout<<error.errorString().toStdString().c_str() << std::endl;
-     }
-
-     QVariantList list = arr.toVariantList();
-      for (int i = 0; i <list.size(); i++) {
-
-          categories.append(list[i].toString());
-      }
+     QStringList categories = this->loader.getCategories();
 
      categoriesComboBox->addItems(categories);
  }

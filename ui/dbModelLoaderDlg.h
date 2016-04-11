@@ -8,6 +8,7 @@
 #include <QJsonObject.h>
 #include <iostream>
 #include <QUrl>
+#include <dbModelLoader.h>
 
 class World;
 class DbModelLoaderDlg : public QDialog, public Ui::DbModelLoaderDlgUI
@@ -19,6 +20,7 @@ private:
     QJsonObject models;
     QString apiUrl;
     QString apiKey;
+    DbModelLoader loader;
     int apiPort;
 protected:
     void setEnv();
@@ -28,9 +30,9 @@ protected:
 public:
 
     DbModelLoaderDlg(QWidget *parent) : QDialog(parent), world(NULL){
-		setupUi(this);
+        setupUi(this);
         init();
-        setEnv();
+        loader = DbModelLoader();
         setCategories();
 
 	}

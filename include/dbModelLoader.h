@@ -19,18 +19,18 @@ private:
     int apiPort;
 protected:
     void setEnv();
-    QStringList getCategories();
-    QStringList getModels(const QString &category);
-    void loadModel(const QString &modelName);
 public:
 
     DbModelLoader() : world(NULL){
         setEnv();
-        getCategories();
+//        getCategories();
 
     }
 
     void setMembers(World *_world);
+    QStringList getCategories();
+    QStringList getModels(const QString &category);
+    void loadModel(const QString &modelName);
 
 };
 
