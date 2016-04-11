@@ -17,7 +17,6 @@ class DbModelLoaderDlg : public QDialog, public Ui::DbModelLoaderDlgUI
 private:
 	void init();
     World *world;
-    QJsonObject models;
     QString apiUrl;
     QString apiKey;
     DbModelLoader loader;
