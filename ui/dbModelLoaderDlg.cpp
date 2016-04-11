@@ -65,57 +65,53 @@ void DbModelLoaderDlg::loadButton_clicked() {
 
  void DbModelLoaderDlg::setModels(const QString &category) {
 
-//     models = NULL;
+     //     models = NULL;
      models = QJsonObject();
 
-     SyncHTTP h(apiUrl, apiPort);
-     QString url_path = "/models?category=" + category + "&access_token=" + apiKey;
+//     SyncHTTP h(apiUrl, apiPort);
+//     QString url_path = "/models?category=" + category + "&access_token=" + apiKey;
 
-     QBuffer output;
-     bool status = h.syncGet(url_path,&output);
-     if(!status)
-     {
-         return;
-     }
+//     QBuffer output;
+//     bool status = h.syncGet(url_path,&output);
+//     if(!status)
+//     {
+//         return;
+//     }
 
-     QByteArray bytes = output.readAll();
+//     QByteArray bytes = output.readAll();
 
-     QJsonParseError error;
-     QJsonDocument doc = QJsonDocument::fromJson(bytes, &error);
-     QJsonArray arr;
+//     QJsonParseError error;
+//     QJsonDocument doc = QJsonDocument::fromJson(bytes, &error);
+//     QJsonArray arr;
 
-     // check validity of the document
-     if(!doc.isNull())
-     {
-         if(doc.isArray())
-         {
-             arr = doc.array();
-         }
-         else
-         {
-             std::cout  << "Document is not an array" << std::endl;
-         }
-     }
-     else
-     {
-        std::cout<<error.errorString().toStdString().c_str() << std::endl;
-     }
+//     // check validity of the document
+//     if(!doc.isNull())
+//     {
+//         if(doc.isArray())
+//         {
+//             arr = doc.array();
+//         }
+//         else
+//         {
+//             std::cout  << "Document is not an array" << std::endl;
+//         }
+//     }
+//     else
+//     {
+//        std::cout<<error.errorString().toStdString().c_str() << std::endl;
+//     }
 
+
+    QStringList modelNames = loader.getModels(category);
      modelsComboBox->clear();
-     for(int i = 0; i < arr.size(); i++) {
-        QString modelName = arr[i].toObject()["name"].toString();
-        models[modelName] = arr[i].toObject()["url"].toString();
+     for(int i = 0; i < modelNames.size(); i++) {
 
-        modelsComboBox->addItem(modelName);
-//        std::cout << modelName.toStdString().c_str() << std::endl;
-//        std::cout << models[modelName].toString().toStdString().c_str() << std::endl;
-
+         modelsComboBox->addItem(modelNames[i]);
      }
  }
 
  void DbModelLoaderDlg::loadModel(const QString &modelName) {
-     QString url = models[modelName].toString();
-
+    QString url = loader.models[modelName].toString();
     std::cout << url.toStdString().c_str() << std::endl;
      Body *b = world->importBodyFromBuffer("GraspableBody", url);
      //b->getIVScaleTran()

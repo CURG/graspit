@@ -13,7 +13,7 @@ class DbModelLoader
 {
 private:
     World *world;
-    QJsonObject models;
+
     QString apiUrl;
     QString apiKey;
     int apiPort;
@@ -26,7 +26,7 @@ public:
 //        getCategories();
 
     }
-
+    QJsonObject models;
     void setMembers(World *_world);
     QStringList getCategories();
     QStringList getModels(const QString &category);
