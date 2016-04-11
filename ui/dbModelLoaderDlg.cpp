@@ -19,7 +19,7 @@ void DbModelLoaderDlg::init()	{
 void DbModelLoaderDlg::loadButton_clicked() {
     QString modelName = modelsComboBox->currentText();
     std::cout << modelName.toStdString().c_str() << std::endl;
-    loadModel(modelName);
+    loader.loadModel(modelName);
     close();
 }
 
@@ -31,6 +31,7 @@ void DbModelLoaderDlg::loadButton_clicked() {
  void DbModelLoaderDlg::setMembers(World *_world) {
 
     world = _world;
+    loader.setMembers(_world);
  }
 
 
