@@ -33,27 +33,6 @@ void DbModelLoaderDlg::loadButton_clicked() {
     world = _world;
  }
 
- void DbModelLoaderDlg::setEnv() {
-     apiUrl = getenv("API_URL");
-     if(apiUrl == "") {
-         std::cout << "Setting API_URL to default borneo.cs.columbia.edu:8080" << std::endl;
-         apiUrl = "borneo.cs.columbia.edu";
-         apiPort = 8080;
-     } else {
-
-         QUrl url(apiUrl);
-         apiUrl = url.host();
-         apiPort = url.port();
-         if(apiPort <= 0){
-             apiPort = 80;
-
-         }
-
-
-     }
-
-     apiKey = getenv("API_KEY");
-}
 
  void DbModelLoaderDlg::setCategories() {
 
@@ -77,7 +56,7 @@ void DbModelLoaderDlg::loadButton_clicked() {
  void DbModelLoaderDlg::loadModel(const QString &modelName) {
     QString url = loader.models[modelName].toString();
     std::cout << url.toStdString().c_str() << std::endl;
-     Body *b = world->importBodyFromBuffer("GraspableBody", url);
+    Body *b = world->importBodyFromBuffer("GraspableBody", url);
      //b->getIVScaleTran()
      //b->setGeometryScaling(1000,1000,1000);
  }

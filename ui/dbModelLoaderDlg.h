@@ -22,7 +22,6 @@ private:
     DbModelLoader loader;
     int apiPort;
 protected:
-    void setEnv();
     void setCategories();
     void setModels(const QString &category);
     void loadModel(const QString &modelName);
