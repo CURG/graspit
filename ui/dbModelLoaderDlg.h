@@ -25,15 +25,12 @@ protected:
     void setCategories();
     void setModels(const QString &category);
 public:
-
     DbModelLoaderDlg(QWidget *parent) : QDialog(parent), world(NULL){
         setupUi(this);
         init();
         setCategories();
 
 	}
-
-    void setMembers(World *_world);
 public Q_SLOTS:
     void loadButton_clicked();
     void categoryComboBox_clicked(const QString &category);

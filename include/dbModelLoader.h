@@ -7,6 +7,7 @@
 #include <QJsonObject.h>
 #include <iostream>
 #include <QUrl>
+#include "include/graspitGUI.h"
 
 class World;
 class DbModelLoader
@@ -22,12 +23,13 @@ protected:
 public:
 
     DbModelLoader() : world(NULL){
+
+        world = graspItGUI->getMainWorld();
         setEnv();
 //        getCategories();
 
     }
     QJsonObject models;
-    void setMembers(World *_world);
     QStringList getCategories();
     QStringList getModels(const QString &category);
     void loadModelFromName(const QString &modelName);

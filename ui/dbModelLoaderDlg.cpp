@@ -28,13 +28,6 @@ void DbModelLoaderDlg::loadButton_clicked() {
     setModels(category);
  }
 
- void DbModelLoaderDlg::setMembers(World *_world) {
-
-    world = _world;
-    loader.setMembers(_world);
- }
-
-
  void DbModelLoaderDlg::setCategories() {
 
      QStringList categories = this->loader.getCategories();

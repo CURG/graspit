@@ -16,11 +16,6 @@
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include "ivmgr.h"
 
- void DbModelLoader::setMembers(World *_world) {
-
-    world = _world;
- }
-
  void DbModelLoader::setEnv() {
      apiUrl = getenv("API_URL");
      if(apiUrl == "") {

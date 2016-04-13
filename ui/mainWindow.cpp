@@ -374,7 +374,6 @@ void MainWindow::fileImportObjectDB()
     std::cout << "Loading Database Object" << std::endl;
 
     DbModelLoaderDlg *dlg = new DbModelLoaderDlg(mWindow);
-    dlg->setMembers(world);
     dlg->setAttribute(Qt::WA_ShowModal, false);
     dlg->setAttribute(Qt::WA_DeleteOnClose, true);
     dlg->show();
