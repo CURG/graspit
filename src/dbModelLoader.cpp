@@ -139,8 +139,12 @@
      return modelNames;
  }
 
- void DbModelLoader::loadModel(const QString &modelName) {
+ void DbModelLoader::loadModelFromName(const QString &modelName) {
      QString url = models[modelName].toString();
+    loadModelFromUrl(url);
+ }
+
+ void DbModelLoader::loadModelFromUrl(const QString &url) {
 
      std::cout << url.toStdString().c_str() << std::endl;
      Body *b = world->importBodyFromBuffer("GraspableBody", url);

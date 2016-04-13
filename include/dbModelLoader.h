@@ -30,7 +30,8 @@ public:
     void setMembers(World *_world);
     QStringList getCategories();
     QStringList getModels(const QString &category);
-    void loadModel(const QString &modelName);
+    void loadModelFromName(const QString &modelName);
+    void loadModelFromUrl(const QString &url);
 
 };
 
