@@ -24,13 +24,11 @@ private:
 protected:
     void setCategories();
     void setModels(const QString &category);
-    void loadModel(const QString &modelName);
 public:
 
     DbModelLoaderDlg(QWidget *parent) : QDialog(parent), world(NULL){
         setupUi(this);
         init();
-        loader = DbModelLoader();
         setCategories();
 
 	}

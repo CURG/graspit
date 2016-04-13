@@ -416,8 +416,23 @@ Body::loadFileBuffer(const QString &url, const int material_idx)
         return FAILURE;
     }
 
-    setMaterial(material_idx);
     //add material for controlling transparency
+    setMaterial(material_idx);
+
+    //scaling of the geometry
+    IVScaleTran = new SoTransform;
+    IVScaleTran->scaleFactor.setValue(1.0, 1.0, 1.0);
+    IVGeomRoot->insertChild(IVScaleTran, 0);
+
+    //any offset to the geometry, inserted inside the geometry itself
+    //note that the offset gets added before the scale, so the offset is
+    //always expressed in graspit's units
+    IVOffsetTran = new SoTransform;
+    transf::IDENTITY.toSoTransform(IVOffsetTran);
+    transf offsetTran = transf::IDENTITY;
+    offsetTran.toSoTransform(IVOffsetTran);
+    IVGeomRoot->insertChild(IVOffsetTran, 0);
+
     addIVMat();
     return SUCCESS;
 }

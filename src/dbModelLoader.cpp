@@ -12,6 +12,10 @@
 #include "qjson4/QJsonParseError.h"
 #include <debug.h>
 
+#include "graspitGUI.h"
+#include <Inventor/actions/SoGetBoundingBoxAction.h>
+#include "ivmgr.h"
+
  void DbModelLoader::setMembers(World *_world) {
 
     world = _world;
@@ -20,7 +24,7 @@
  void DbModelLoader::setEnv() {
      apiUrl = getenv("API_URL");
      if(apiUrl == "") {
-         std::cout << "Setting API_URL to default borneo.cs.columbia.edu:8080" << std::endl;
+         std::cerr << "WARNING: Setting API_URL to default borneo.cs.columbia.edu:8080" << std::endl;
          apiUrl = "borneo.cs.columbia.edu";
          apiPort = 8080;
      } else {
@@ -37,6 +41,10 @@
      }
 
      apiKey = getenv("API_KEY");
+     if(apiKey == "") {
+         std::cerr << "ERROR: ENV API_KEY not set" << std::endl;
+     }
+
 }
 
  QStringList DbModelLoader::getCategories() {
@@ -136,6 +144,24 @@
 
      std::cout << url.toStdString().c_str() << std::endl;
      Body *b = world->importBodyFromBuffer("GraspableBody", url);
+
+     SoGetBoundingBoxAction *bba =
+         new SoGetBoundingBoxAction(graspItGUI->getIVmgr()->getViewer()->getViewportRegion());
+     bba->apply(b->getIVGeomRoot());
+     SbVec3f bbmin,bbmax;
+     bba->getBoundingBox().getBounds(bbmin,bbmax);
+     delete bba;
+     double a1 = (bbmax[0] - bbmin[0]);
+     double b1 = (bbmax[1] - bbmin[1]);
+     double c1 = (bbmax[2] - bbmin[2]);
+
+     double largest_dim = std::max(std::max(a1, b1), c1);
+
+     double scale = 150 / largest_dim;
+     //want largest dim to be 10cm
+     //
+     b->setGeometryScaling(scale,scale,scale);
+
      //b->getIVScaleTran()
      //b->setGeometryScaling(1000,1000,1000);
  }

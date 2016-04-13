@@ -53,11 +53,3 @@ void DbModelLoaderDlg::loadButton_clicked() {
          modelsComboBox->addItem(modelNames[i]);
      }
  }
-
- void DbModelLoaderDlg::loadModel(const QString &modelName) {
-    QString url = loader.models[modelName].toString();
-    std::cout << url.toStdString().c_str() << std::endl;
-    Body *b = world->importBodyFromBuffer("GraspableBody", url);
-     //b->getIVScaleTran()
-     //b->setGeometryScaling(1000,1000,1000);
- }
