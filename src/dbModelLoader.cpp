@@ -136,10 +136,10 @@
 
  void DbModelLoader::loadModelFromName(const QString &modelName) {
      QString url = models[modelName].toString();
-    loadModelFromUrl(url);
+    loadModelFromUrl(url, modelName, QString("rubber"));
  }
 
- void DbModelLoader::loadModelFromUrl(const QString &url) {
+ void DbModelLoader::loadModelFromUrl(const QString &url, const QString &modelName, const QString &material) {
 
      std::cout << url.toStdString().c_str() << std::endl;
      Body *b = world->importBodyFromBuffer("GraspableBody", url);
@@ -160,6 +160,8 @@
      //want largest dim to be 10cm
      //
      b->setGeometryScaling(scale,scale,scale);
+     b->setMaterial(world->getMaterialIdx(material));
+     b->setName(modelName);
 
      //b->getIVScaleTran()
      //b->setGeometryScaling(1000,1000,1000);

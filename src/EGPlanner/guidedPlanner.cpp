@@ -292,6 +292,7 @@ GuidedPlanner::checkChildren()
 	//now check if we have seeds and children available
 	while ((int)mChildPlanners.size() < mMaxChildren && !mChildSeeds.empty()) {	
 		GraspPlanningState *seed = mChildSeeds.front();
+        std::cout << "seeds" << std::endl;
 		mChildSeeds.pop_front();
 		//avoid this state in the future since it will be searched by a child
 		mAvoidList.push_back(seed);

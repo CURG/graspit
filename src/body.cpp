@@ -108,27 +108,27 @@ double DynamicBody::defaultMass = 300.0;
 */
 Body::Body(World *w,const char *name) : WorldElement(w,name)
 {
-	//defaults:
-	mIsElastic = false;
-	youngMod = -1;
+    //defaults:
+    mIsElastic = false;
+    youngMod = -1;
 	
-	material = -1;
-	numContacts=0;
-	showFC = false;
-	showVC = false;
-	IVGeomRoot = NULL; IVTran = NULL; IVMat = NULL; IVContactIndicators=NULL;
+    material = -1;
+    numContacts=0;
+    showFC = false;
+    showVC = false;
+    IVGeomRoot = NULL; IVTran = NULL; IVMat = NULL; IVContactIndicators=NULL;
         IVScaleTran = NULL;
         IVOffsetTran = NULL;
-	IVBVRoot = NULL;
+    IVBVRoot = NULL;
 #ifdef GEOMETRY_LIB
-	IVPrimitiveRoot = NULL;
+    IVPrimitiveRoot = NULL;
 #endif
-	mUsesFlock = false;
-	mBirdNumber = 0;
-	mRenderGeometry = true;
-	mGeometryFilename = "none";
+    mUsesFlock = false;
+    mBirdNumber = 0;
+    mRenderGeometry = true;
+    mGeometryFilename = "none";
 
-	initializeIV();
+    initializeIV();
 }
 
 /*!

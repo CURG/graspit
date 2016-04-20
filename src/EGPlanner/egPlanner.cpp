@@ -248,7 +248,8 @@ EGPlanner::showClone(bool s)
 	}
 	if (!s) {
 		mHand->getWorld()->removeElementFromSceneGraph(mHand);
-	} else {
+    } else {
+        std::cout << "Adding to world" << std::endl;
 		mHand->getWorld()->addElementToSceneGraph(mHand);
 	}
 }
@@ -349,6 +350,7 @@ EGPlanner::startThread()
 	//the new thread will automatically create a clone and add it to the world
 	//but not to the scene graph. We add it to the scene graph here so it's
 	//done in the main thread
+    std::cout << "Adding to world: mHand->getWorld()->addElementToSceneGraph(mHand);" << std::endl;
 	mHand->getWorld()->addElementToSceneGraph(mHand);	
 }
 

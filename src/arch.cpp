@@ -42,7 +42,7 @@ DynamicBody *rightBase;
 
 Body* createSupport(double size, double thickness, World *world)
 {
-	Body *body = new Body(world,"Support");
+    Body *body = new Body(world,"Support");
 
 	//8 vertices
 	SbVec3f *points = new SbVec3f[8];

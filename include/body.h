@@ -180,6 +180,7 @@ protected:
 
   /////////////////////////////// PUBLIC /////////////////////////////////
 public:
+
   //! Empty body with invalid material and no geometry
   Body(World *w,const char *name=0);
 

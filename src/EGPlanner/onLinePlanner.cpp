@@ -318,6 +318,7 @@ OnLinePlanner::mainLoop()
 		s->changeHand( mRefHand, true );
 		mBestList.push_back(s);
 		if (mMarkSolutions) {
+            std::cout << "adding solution" << std::endl;
 			mHand->getWorld()->getIVRoot()->addChild( s->getIVRoot() );
 		}
 	}
