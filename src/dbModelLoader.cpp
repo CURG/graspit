@@ -135,11 +135,12 @@
  }
 
  void DbModelLoader::loadModelFromName(const QString &modelName) {
-     QString url = models[modelName].toString();
-    loadModelFromUrl(url, modelName, QString("rubber"));
+    QString url = models[modelName].toString();
+    double dimension[] = {150, 150, 150};
+    loadModelFromUrl(url, modelName, QString("rubber"), dimension);
  }
 
- void DbModelLoader::loadModelFromUrl(const QString &url, const QString &modelName, const QString &material) {
+ void DbModelLoader::loadModelFromUrl(const QString &url, const QString &modelName, const QString &material, double dimension[]) {
 
      std::cout << url.toStdString().c_str() << std::endl;
      Body *b = world->importBodyFromBuffer("GraspableBody", url);
@@ -153,16 +154,19 @@
      double a1 = (bbmax[0] - bbmin[0]);
      double b1 = (bbmax[1] - bbmin[1]);
      double c1 = (bbmax[2] - bbmin[2]);
-
      double largest_dim = std::max(std::max(a1, b1), c1);
+     // TODO:
+     // OLD CODE TO BE REMOVED
+     //     double scale = 150 / largest_dim;
 
-     double scale = 150 / largest_dim;
+
+     double x = dimension[0]/largest_dim;
+     double y = dimension[1]/largest_dim;
+     double z = dimension[2]/largest_dim;
      //want largest dim to be 10cm
      //
-     b->setGeometryScaling(scale,scale,scale);
+     b->setGeometryScaling(x, y, z);
      b->setMaterial(world->getMaterialIdx(material));
      b->setName(modelName);
 
-     //b->getIVScaleTran()
-     //b->setGeometryScaling(1000,1000,1000);
  }

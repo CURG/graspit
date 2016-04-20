@@ -33,7 +33,7 @@ public:
     QStringList getCategories();
     QStringList getModels(const QString &category);
     void loadModelFromName(const QString &modelName);
-    void loadModelFromUrl(const QString &url, const QString &modelName, const QString &material);
+    void loadModelFromUrl(const QString &url, const QString &modelName, const QString &material, double dimension[]);
 };
 
 
