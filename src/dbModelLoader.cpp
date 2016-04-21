@@ -134,13 +134,64 @@
      return modelNames;
  }
 
+
+QJsonObject DbModelLoader::loadRandomModel() {
+
+
+     SyncHTTP h(apiUrl, apiPort);
+     QString url_path = "/grasps/random_combo?access_token=" + apiKey;
+
+     QBuffer output;
+     bool status = h.syncGet(url_path,&output);
+     if(!status) {
+        std::cout << "Failed to get model from " << url_path.toStdString().c_str() << std::endl;
+
+     }
+
+     QByteArray bytes = output.readAll();
+
+     QJsonParseError error;
+     QJsonDocument doc = QJsonDocument::fromJson(bytes, &error);
+     QJsonObject object;
+
+     // check validity of the document
+     if(!doc.isNull()) {
+         if(doc.isObject()) {
+             object = doc.object();
+         }
+         else {
+             std::cout  << "Document is not an object" << std::endl;
+         }
+     } else {
+        std::cout<<error.errorString().toStdString().c_str() << std::endl;
+     }
+
+
+     QString hand = object["hand"].toString();
+     QString url = object["model"].toObject()["url"].toString();
+     QString name = object["model"].toObject()["name"].toString();
+     QString material = object["model"].toObject()["material"].toString();
+
+    double dimension = object["model"].toObject()["dimension"].toDouble();
+    QString robotPath = QString(getenv("GRASPIT")) + QString("/models/robots/") + hand + QString("/") + hand + QString(".xml");
+
+
+    std::cout << url.toStdString().c_str() << std::endl;
+
+    graspItGUI->getMainWorld()->importRobot(robotPath.toStdString().c_str());
+
+    loadModelFromUrl(url, name, material, dimension);
+
+    return object["model"].toObject();
+ }
+
  void DbModelLoader::loadModelFromName(const QString &modelName) {
     QString url = models[modelName].toString();
-    double dimension[] = {150, 150, 150};
+    double dimension = 100;
     loadModelFromUrl(url, modelName, QString("rubber"), dimension);
  }
 
- void DbModelLoader::loadModelFromUrl(const QString &url, const QString &modelName, const QString &material, double dimension[]) {
+ void DbModelLoader::loadModelFromUrl(const QString &url, const QString &modelName, const QString &material, double dimension) {
 
      std::cout << url.toStdString().c_str() << std::endl;
      Body *b = world->importBodyFromBuffer("GraspableBody", url);
@@ -160,13 +211,14 @@
      //     double scale = 150 / largest_dim;
 
 
-     double x = dimension[0]/largest_dim;
-     double y = dimension[1]/largest_dim;
-     double z = dimension[2]/largest_dim;
+     double x = dimension/largest_dim;
+     double y = dimension/largest_dim;
+     double z = dimension/largest_dim;
      //want largest dim to be 10cm
      //
      b->setGeometryScaling(x, y, z);
      b->setMaterial(world->getMaterialIdx(material));
      b->setName(modelName);
+
 
  }
