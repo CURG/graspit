@@ -44,6 +44,7 @@
 #include "debug.h"
 #include "dynamics.h"
 #include "humanHand.h"
+
 BulletDynamics::BulletDynamics(World *world)
 {
 
@@ -506,6 +507,10 @@ void BulletDynamics::btApplyInternalWrench (Joint * activeJoint, double magnitud
 
 int BulletDynamics::stepDynamics()
 {
+    #ifdef GRASPITDBG
+    printFPS();
+    #endif
+
     double timeStep=1.0f/60.f;
 
     mBtDynamicsWorld->stepSimulation(timeStep,10);
@@ -515,6 +520,7 @@ int BulletDynamics::stepDynamics()
 
     return 0;
 }
+
 
 
 

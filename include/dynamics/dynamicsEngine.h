@@ -30,6 +30,10 @@
 #define DYNAMICSENGINE_HXX
 
 #include "world.h"
+#include <ctime>
+#include <iostream>
+#include <chrono>
+#include <time.h>
 
 class DynamicsEngine {
  public:
@@ -43,6 +47,37 @@ class DynamicsEngine {
 
   virtual double moveDynamicBodies(double timeStep) = 0;
   virtual int computeNewVelocities(double timeStep) = 0;
+
+protected:
+
+    int frame_count;
+    clock_t Start;
+    void printFPS()
+    {
+
+        //if count is not initalized, set it to 0
+        if (frame_count < 0  || frame_count > 60)
+        {
+            frame_count = 0;
+        }
+
+        if(frame_count ==0)
+        {
+            Start = clock();
+        }
+        if(frame_count ==60)
+        {
+            float frames = 60.0;
+            std::cout << clock() << std::endl;
+            float time_passed_in_sec = ((float)clock() - (float)Start)/(1.0*CLOCKS_PER_SEC) ;
+            DBGP("time_passed_in_sec: " << time_passed_in_sec);
+            DBGP("FPS: " << 1.0 / time_passed_in_sec);
+
+            frame_count = -1;
+        }
+
+        frame_count +=1;
+    };
 };
 
 #endif
