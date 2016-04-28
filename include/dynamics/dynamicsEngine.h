@@ -32,8 +32,8 @@
 #include "world.h"
 #include <ctime>
 #include <iostream>
-#include <chrono>
 #include <time.h>
+#include "debug.h"
 
 class DynamicsEngine {
  public:
@@ -48,10 +48,9 @@ class DynamicsEngine {
   virtual double moveDynamicBodies(double timeStep) = 0;
   virtual int computeNewVelocities(double timeStep) = 0;
 
-protected:
-
     int frame_count;
     clock_t Start;
+
     void printFPS()
     {
 
@@ -67,11 +66,10 @@ protected:
         }
         if(frame_count ==60)
         {
-            float frames = 60.0;
-            std::cout << clock() << std::endl;
-            float time_passed_in_sec = ((float)clock() - (float)Start)/(1.0*CLOCKS_PER_SEC) ;
-            DBGP("time_passed_in_sec: " << time_passed_in_sec);
-            DBGP("FPS: " << 1.0 / time_passed_in_sec);
+            float time_passed_in_sec = ((float)clock() - (float)Start)/(1.0*CLOCKS_PER_SEC);
+
+            DBGA("60 Frames, Time Passed(s): " << time_passed_in_sec);
+            DBGA("Dynamics FPS: " << 1.0 / time_passed_in_sec);
 
             frame_count = -1;
         }
@@ -79,5 +77,6 @@ protected:
         frame_count +=1;
     };
 };
+
 
 #endif

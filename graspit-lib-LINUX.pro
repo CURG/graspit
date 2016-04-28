@@ -2,9 +2,6 @@
 
 LIBS += $$ADDITIONAL_LINK_FLAGS
 
-CONFIG +=  c++11
-QMAKE_CXXFLAGS += -std=c++11
-
 # ---------------------- Bullet Dynamics ----------------------------------
 
 bullet_dynamics{

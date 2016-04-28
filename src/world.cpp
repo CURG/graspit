@@ -2124,12 +2124,17 @@ joint constraints, for the next time step.
 void
 World::stepDynamics()
 {
+    #ifdef GRASPITDBG
+    mDynamicsEngine->printFPS();
+    #endif
+
     int ret;
     ret=mDynamicsEngine->stepDynamics();
     if(ret==-1){
       return;
     }
 	if (idleSensor) idleSensor->schedule();
+
 }
 
 void World::selectTendon(Tendon *t)

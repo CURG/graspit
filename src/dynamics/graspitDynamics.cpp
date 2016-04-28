@@ -376,10 +376,6 @@ int GraspitDynamics::computeNewVelocities(double timeStep) {
 
 int GraspitDynamics::stepDynamics() {
 
-  #ifdef GRASPITDBG
-  printFPS();
-  #endif
-
   mWorld->resetDynamicWrenches();
   double actualTimeStep = moveDynamicBodies(mWorld->getTimeStep());
   if (actualTimeStep < 0) {
