@@ -4,7 +4,7 @@
 
 #----------------------general settings--------------------
 
-QT +=  qt3support 
+QT +=  qt3support
 
 CONFIG += qt warn_on exceptions assistant
 
@@ -20,9 +20,10 @@ UI_DIR = ui
 
 # ---------------------- Graspit source code ----------------------------------------------
 
-INCLUDEPATH += src src/Collision include include/math include/Planner include/EGPlanner include/robots ui ui/Planner ui/EGPlanner
+INCLUDEPATH += src src/Collision include include/math include/Planner include/EGPlanner include/dynamics ui ui/Planner ui/EGPlanner include/EGPlanner/energy include/robots
 
-DEPENDPATH += src src/Collision include include/math include/Planner include/EGPlanner include/robots ui ui/Planner ui/EGPlanner
+DEPENDPATH += src src/Collision include include/math include/Planner include/EGPlanner include/dynamics ui ui/Planner ui/EGPlanner include/EGPlanner/energy include/robots
+
 
 HEADERS	+= include/body.h \
 	include/bBox.h \
@@ -31,7 +32,6 @@ HEADERS	+= include/body.h \
 	include/contactSetting.h \
 	include/debug.h \
 	include/dof.h \
-	include/dynamics.h \
 	include/eigenGrasp.h \
 	include/gloveInterface.h \
 	include/grasp.h \
@@ -66,11 +66,13 @@ HEADERS	+= include/body.h \
 	include/graspitGUI.h \
 	include/graspitServer.h \
 	include/graspitApp.h \
-	include/dynJoint.h \
 	include/arch.h \
 	include/math/matrix.h \
 	src/Collision/collisionInterface.h \
 	src/Collision/collisionStructures.h \
+        include/dynamics/dynamics.h \
+        include/dynamics/dynamicsEngine.h \
+        include/dynamics/dynJoint.h \
 	include/Planner/grasp_visualization.h \
 	include/Planner/grasp_tester.h \
 	include/Planner/grasp_preshape.h \
@@ -84,7 +86,16 @@ HEADERS	+= include/body.h \
 	include/EGPlanner/simAnn.h \
 	include/EGPlanner/searchState.h \
 	include/EGPlanner/searchStateImpl.h \
-	include/EGPlanner/searchEnergy.h \
+        include/EGPlanner/energy/searchEnergy.h \
+        include/EGPlanner/energy/autograspQualityEnergy.h \
+        include/EGPlanner/energy/compliantEnergy.h \
+        include/EGPlanner/energy/contactEnergy.h \
+        include/EGPlanner/energy/dynamicAutograspEnergy.h \
+        include/EGPlanner/energy/guidedAutoGraspEnergy.h \
+        include/EGPlanner/energy/strictAutoGraspEnergy.h \
+        include/EGPlanner/energy/guidedPotentialQualityEnergy.h \
+        include/EGPlanner/energy/potentialQualityEnergy.h \
+        include/EGPlanner/energy/closureSearchEnergy.h \
 	include/EGPlanner/onLinePlanner.h \
 	include/EGPlanner/egPlanner.h \
 	include/EGPlanner/simAnnPlanner.h \
@@ -115,8 +126,6 @@ SOURCES	+= src/arch.cpp \
 	src/contact.cpp \
 	src/contactSetting.cpp \
 	src/dof.cpp \
-	src/dynamics.cpp \
-	src/dynJoint.cpp \
 	src/eigenGrasp.cpp \
 	src/gloveInterface.cpp \
 	src/grasp.cpp \
@@ -150,6 +159,8 @@ SOURCES	+= src/arch.cpp \
 	src/worldElementFactory.cpp \
 	src/math/matrix.cpp \
 	src/Collision/collisionInterface.cpp \
+        src/dynamics/dynamics.cpp \
+        src/dynamics/dynJoint.cpp \
 	src/Planner/grasp_visualization.cpp \
 	src/Planner/grasp_tester.cpp \
 	src/Planner/grasp_preshape.cpp \
@@ -162,7 +173,16 @@ SOURCES	+= src/arch.cpp \
 	src/EGPlanner/simAnn.cpp \
 	src/EGPlanner/searchState.cpp \
 	src/EGPlanner/searchStateImpl.cpp \
-	src/EGPlanner/searchEnergy.cpp \
+        src/EGPlanner/energy/searchEnergy.cpp \
+        src/EGPlanner/energy/autograspQualityEnergy.cpp \
+        src/EGPlanner/energy/compliantEnergy.cpp \
+        src/EGPlanner/energy/contactEnergy.cpp \
+        src/EGPlanner/energy/dynamicAutograspEnergy.cpp \
+        src/EGPlanner/energy/guidedAutoGraspEnergy.cpp \
+        src/EGPlanner/energy/strictAutoGraspEnergy.cpp \
+        src/EGPlanner/energy/guidedPotentialQualityEnergy.cpp \
+        src/EGPlanner/energy/potentialQualityEnergy.cpp \
+        src/EGPlanner/energy/closureSearchEnergy.cpp \
 	src/EGPlanner/onLinePlanner.cpp \
 	src/EGPlanner/egPlanner.cpp \
 	src/EGPlanner/simAnnPlanner.cpp \
@@ -484,6 +504,21 @@ eigengrids {
                eigengrids/intersection_sphere.h \
                eigengrids/intersection_triangle.h
 
+}
+
+
+# ---------------------- Dynamics ----------------------------------
+
+graspit_dynamics{
+    DEFINES += GRASPIT_DYNAMICS
+    HEADERS += include/dynamics/graspitDynamics.h
+    SOURCES += src/dynamics/graspitDynamics.cpp
+}
+
+bullet_dynamics{
+    DEFINES += BULLET_DYNAMICS
+    HEADERS += include/dynamics/bulletDynamics.h
+    SOURCES += src/dynamics/bulletDynamics.cpp
 }
 
 #-------------------------------------- Optimizer ---------------------
