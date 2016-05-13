@@ -877,6 +877,9 @@ World::importBodyFromBuffer(QString bodyType, QString url)
   Body *newBody = (Body *) getWorldElementFactory().createElement(bodyType.toStdString(), this, NULL);
   if (!newBody) return NULL;
   if (newBody->loadFileBuffer(url, getMaterialIdx("rubber"))==FAILURE) return NULL;
+  ((DynamicBody *)newBody)->setMass(100);
+  ((DynamicBody *)newBody)->setDefaultDynamicParameters();
+  newBody->addIVMat();
   newBody->addToIvc();
   addBody(newBody);
   return newBody;

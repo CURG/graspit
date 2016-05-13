@@ -219,6 +219,6 @@ QJsonObject DbModelLoader::loadRandomModel() {
      b->setGeometryScaling(x, y, z);
      b->setMaterial(world->getMaterialIdx(material));
      b->setName(modelName);
-
+     ((GraspableBody *)b)->setMass(100.0);
 
  }

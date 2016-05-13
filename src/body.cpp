@@ -412,6 +412,17 @@ Body::loadFileBuffer(const QString &url, const int material_idx)
 
     int result = loadGeometryOFFBuffer(url);
 
+//    position defaultCog;
+//    double defaultI[9];
+//    computeDefaultMassProp(defaultCog, defaultI);
+
+//    setMass(100);
+//    setCoG(defaultCog);
+//    setInertiaMatrix(defaultI);
+//    setMaxRadius(computeDefaultMaxRadius());
+
+
+
     if (result != SUCCESS) {
         return FAILURE;
     }
@@ -2237,6 +2248,7 @@ DynamicBody::clearState()
 		vStack.pop_back(); 
 		qStack.pop_back();
 	}
+
 }
 /*!
   Calls Body::setTran then updates the dynamic state of the body.

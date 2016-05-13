@@ -115,9 +115,7 @@ void ContactCallback::leafTest(const Leaf *l1, const Leaf *l2)
 			std::vector< std::pair<position,position> > contactPoints;
 			int numContacts = triangleTriangleContact(t1, *it2, mThreshold*mThreshold,
 													  &contactPoints);
-			if (numContacts < 0) {
-				DBGA("Collision found when looking for contacts");
-			}
+
 			std::vector< std::pair<position,position> >::iterator it;
 			for(it=contactPoints.begin(); it!=contactPoints.end(); it++) {
 				position p1 = (*it).first;
