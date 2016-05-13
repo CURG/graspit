@@ -21,7 +21,7 @@ CONFIG += graspit_collision
 
 #select collision detection engine
 #possible values: graspit_dynamics bullet_dynamics
-CONFIG += graspit_dynamics
+CONFIG += bullet_dynamics
 
 #select blas and lapack libraries, Windows-only
 #possible values: mkl clapack
