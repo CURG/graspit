@@ -187,7 +187,7 @@ QJsonObject DbModelLoader::loadRandomModel() {
 
  void DbModelLoader::loadModelFromName(const QString &modelName) {
     QString url = models[modelName].toString();
-    double dimension = 100;
+    double dimension = 300;
     loadModelFromUrl(url, modelName, QString("rubber"), dimension);
  }
 
