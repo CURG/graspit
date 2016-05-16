@@ -29,10 +29,14 @@
 #include <iomanip>
 #include <QFile>
 #include <QTextStream>
+#include <typeinfo>
 
 //needed just for the image of the Flock of Birds sensor and the approach direction
 #include "SoArrow.h"
 #include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoGroup.h>
+#include <Inventor/nodes/SoScale.h>
+
 
 #include "bBox.h"
 #include "mytools.h"
@@ -49,6 +53,9 @@
 #include "eigenGrasp.h"
 #include "matrix.h"
 #include "tinyxml.h"
+#include "collisionInterface.h"
+#include "SensorInterface.h"
+#include "triangle.h"
 
 #ifdef USE_DMALLOC
 #include "dmalloc.h"
@@ -109,10 +116,33 @@ Robot::loadFromXml(const TiXmlElement* root,QString rootPath)
 	QString ivdir = rootPath + "iv/";
 	// read and load the base; automatically placed at origin
 	DBGA("Creating base...\n");  
+    QString sensorType = element->Attribute("sensorType");
 	if(element){
-		valueStr = element->GetText();	
-		valueStr = valueStr.stripWhiteSpace();
-		base = new Link(this,-1,-1,myWorld,(QString(name())+"Base").latin1());
+        valueStr = element->GetText();
+        valueStr = valueStr.stripWhiteSpace();
+        if(!sensorType.isNull())
+        {
+            if(sensorType == "BodySensor")
+            {
+                sensorType.stripWhiteSpace();
+                base = new SensorLink(this, -1, -1, myWorld, (QString(name())+"Base").latin1());
+                BodySensor * bd = new BodySensor(base);
+                QString sensorNumber = element->Attribute("groupNumber");
+                sensorNumber = sensorNumber.stripWhiteSpace();
+                if(!sensorNumber.isEmpty())
+                {
+                    bd->setGroupNumber(sensorNumber.toInt());
+                }
+            }
+            else if(sensorType == "FilteredSensor"){
+                sensorType.stripWhiteSpace();
+                base = new SensorLink(this, -1, -1, myWorld,  (QString(name())+"Base").latin1());
+            }
+        }
+        else
+        {
+            base = new Link(this,-1,-1,myWorld,(QString(name())+"Base").latin1());
+        }
 		if (!base  || base->load(ivdir+valueStr)==FAILURE) {
 			if (base) delete base; 
 			base = NULL;
@@ -124,6 +154,15 @@ Robot::loadFromXml(const TiXmlElement* root,QString rootPath)
 		//init my IVRoot and add the base
 		IVRoot = new SoSeparator;
 		IVRoot->addChild(base->getIVRoot());
+        std::list<const TiXmlElement*> elementList = findAllXmlElements(root, "filter");
+        std::list<const TiXmlElement*>::iterator p;
+        for(p = elementList.begin(); p!=elementList.end(); p++){
+            //Get body number
+            QString bodyNumText = (*p)->GetText();
+            QString params = (*p)->Attribute("params");
+            RegionFilteredSensor * bd = new RegionFilteredSensor(base);
+            bd->setFilterParams(&params);
+        }
 	}
 	else{
 		QTWARNING("Base not found");
@@ -1534,6 +1573,16 @@ Robot::jumpDOFToContact(double *desiredVals, int *stoppedJoints, int *numCols)
 		if (numCols) *numCols = (int)lateContacts.size();
 	}
 
+    std::vector<DynamicBody *> robotLinks;
+    getAllLinks(robotLinks);
+    for (int i=0; i<robotLinks.size(); i++) {
+        if (typeid(*robotLinks.at(i)) == typeid(SensorLink)) {
+            ((SensorLink*)robotLinks.at(i))->setContactsChanged();
+        }
+    }
+
+
+
 	delete [] initialDofVals; delete [] newDofVals;
 	delete [] initialJointVals; delete [] newJointVals;
 
@@ -1585,6 +1634,7 @@ Robot::moveDOFToContacts(double *desiredVals, double *desiredSteps, bool stopAtC
 	double *newVals = new double[numDOF];
 
 	for (i=0;i<numDOF;i++) {
+        desiredVals[i] = std::max(dofVec[i]->getMin(), std::min(desiredVals[i], dofVec[i]->getMax()));
 		if (!desiredSteps || desiredSteps[i] == WorldElement::ONE_STEP ) {
 			stepSize[i] = desiredVals[i] - dofVec[i]->getVal();
 		} else if (desiredSteps[i]!=0.0) {
@@ -1650,6 +1700,16 @@ Robot::moveDOFToContacts(double *desiredVals, double *desiredSteps, bool stopAtC
 			graspItGUI->getIVmgr()->getViewer()->render();
 		}
 	} while (1);
+
+    std::vector<DynamicBody *> robotLinks;
+    getAllLinks(robotLinks);
+    for (unsigned int i=0; i<robotLinks.size(); i++) {
+        if (typeid(*robotLinks.at(i)) == typeid(SensorLink)) {
+            ((SensorLink*)robotLinks.at(i))->setContactsChanged();
+        }
+    }
+    graspItGUI->getIVmgr()->getViewer()->render();
+
 
 	//	PROF_STOP_TIMER(MOVE_DOF);
 	//	PROF_PRINT_ALL;
@@ -2368,11 +2428,29 @@ will move back until collision is resolved.
 bool 
 Hand::findInitialContact(double moveDist)
 {
-	CollisionReport colReport;
-	while (myWorld->getCollisionReport(&colReport)) {
+    std::vector<Body*> interestList;
+    for (int c=0; c<numChains; c++) {
+        for (int l=0; l<chainVec[c]->getNumLinks(); l++) {
+            interestList.push_back( chainVec[c]->getLink(l) );
+        }
+    }
+
+    CollisionReport colReport;
+    int iter_count = 0;
+    while (myWorld->getCollisionReport(&colReport, &interestList))
+    {
+        iter_count += 1;
+
 		transf newTran = translate_transf(vec3(0,0,-moveDist / 2.0) * 
 			getApproachTran()) * getTran();
 		setTran(newTran);
+
+        if (iter_count > 100)
+        {
+            DBGP( "Unable to find initial contact" );
+            break;
+        }
+
 	}
 	return approachToContact(moveDist, false);
 }

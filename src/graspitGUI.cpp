@@ -84,6 +84,7 @@ GraspItGUI *graspItGUI = 0;
  */
 GraspItGUI::GraspItGUI(int argc,char **argv) : mDispatch(NULL)
 {
+    DBGA("Processing ARGS....");
   if (!initialized) {
     mainWindow = new MainWindow;
     SoQt::init(mainWindow->mWindow);
@@ -208,7 +209,6 @@ GraspItGUI::processArgs(int argc, char** argv)
   }
 
 #ifdef Q_WS_X11
-
   if (args->exist("world"))
   {
       QString filename = graspitRoot + QString("/worlds/") + QString::fromStdString(args->get<std::string>("world")) + QString(".xml");

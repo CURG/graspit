@@ -116,6 +116,7 @@ World::World(QObject *parent, const char *name, IVmgr *mgr) : QObject(parent,nam
 	numSelectedBodyElements = numSelectedRobotElements = 0;
 	numSelectedElements = 0;
 	numSelectedBodies = 0;
+	numSensors = 0;
 	currentHand = NULL;
 
 	isTendonSelected = false;
@@ -1044,6 +1045,14 @@ World::addRobot(Robot *robot, bool addToScene)
     mDynamicsEngine->addRobot(robot);
 }
 
+/*! Adds to this world a sensor that is already created and initialized.
+*/
+
+void
+World::addSensor(SensorInterface * si){
+    sensorVec.push_back(si);
+    numSensors ++;
+}
 
 /*! Removes a robot from the world and also deletes it. */
 void
