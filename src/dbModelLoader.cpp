@@ -180,6 +180,7 @@ QJsonObject DbModelLoader::loadRandomModel() {
 
     graspItGUI->getMainWorld()->importRobot(robotPath.toStdString().c_str());
 
+    dimension = 125;
     loadModelFromUrl(url, name, material, dimension);
 
     return object["model"].toObject();
@@ -187,7 +188,7 @@ QJsonObject DbModelLoader::loadRandomModel() {
 
  void DbModelLoader::loadModelFromName(const QString &modelName) {
     QString url = models[modelName].toString();
-    double dimension = 300;
+    double dimension = 100;
     loadModelFromUrl(url, modelName, QString("rubber"), dimension);
  }
 
@@ -200,20 +201,26 @@ QJsonObject DbModelLoader::loadRandomModel() {
          new SoGetBoundingBoxAction(graspItGUI->getIVmgr()->getViewer()->getViewportRegion());
      bba->apply(b->getIVGeomRoot());
      SbVec3f bbmin,bbmax;
-     bba->getBoundingBox().getBounds(bbmin,bbmax);
+     bba->getBoundingBox().getBounds(bbmin, bbmax);
      delete bba;
      double a1 = (bbmax[0] - bbmin[0]);
      double b1 = (bbmax[1] - bbmin[1]);
      double c1 = (bbmax[2] - bbmin[2]);
      double largest_dim = std::max(std::max(a1, b1), c1);
-     // TODO:
-     // OLD CODE TO BE REMOVED
-     //     double scale = 150 / largest_dim;
+//     double smallest_dim = std::min(std::min(a1,b1), c1);
+     double average_dim = (a1 + b1 +c1)/ 3.0;
 
+//     double x = dimension/largest_dim;
+//     double y = dimension/largest_dim;
+//     double z = dimension/largest_dim;
 
-     double x = dimension/largest_dim;
-     double y = dimension/largest_dim;
-     double z = dimension/largest_dim;
+     double x = dimension/average_dim;
+     double y = dimension/average_dim;
+     double z = dimension/average_dim;
+
+//     double x = dimension/smallest_dim;
+//     double y = dimension/smallest_dim;
+//     double z = dimension/smallest_dim;
      //want largest dim to be 10cm
      //
      b->setGeometryScaling(x, y, z);
