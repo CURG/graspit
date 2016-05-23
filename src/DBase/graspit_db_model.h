@@ -30,6 +30,7 @@
 #ifndef _GRASPIT_DB_MODEL_ENTRY_H_
 #define _GRASPIT_DB_MODEL_ENTRY_H_
 
+#include "binvox/binvox.h"
 #include "DBPlanner/model.h"
 
 class World;
@@ -41,22 +42,33 @@ class GraspitDBModel : public db_planner::Model{
 protected:
 	//! This is the body representation in GraspIt
 	GraspableBody* mGraspableBody;
+    //! This is the voxelized representation of an object
+    Binvox* mBinvox;
 	//! Tells us if the scene graph geometry of this object has been loaded
 	bool mGeometryLoaded;
-
+    //! Tells us if the .binvox file associated with this object has been loaded
+    bool mBinvoxLoaded;
         //! Loads the geometry for this body
         virtual int loadGeometry();
+
+    //! Loads the binvox for this body
+    virtual int loadBinvox();
+
 public:
-	GraspitDBModel() : mGraspableBody(NULL), mGeometryLoaded(false){}
+    GraspitDBModel() : mGraspableBody(NULL), mBinvox(NULL), mGeometryLoaded(false){}
 	~GraspitDBModel();
 	//! Loads the geometry and initializes the corresponding GraspableBody
 	int load(World* w);
 	//! Deletes the loaded geometry; 
 	void unload();
 	//! Returns the flag that tells us if geometry has been loaded
-	bool geometryLoaded() const {return mGeometryLoaded;}
-	//! Returns the Graspable body
-	GraspableBody* getGraspableBody() const { return mGraspableBody; }
+    bool geometryLoaded() const {return mGeometryLoaded;}
+    //! Returns the flag that tells us if binvox has been loaded
+    bool binvoxLoaded() const {return mBinvoxLoaded;}
+    //! Returns the Graspable body
+    GraspableBody* getGraspableBody() const { return mGraspableBody; }
+    //! Returns the Binvox
+    Binvox* getBinvox() const { return mBinvox; }
 };
 
 //! An implementation of ModelAllocator that returns new GraspitDBModel objects.

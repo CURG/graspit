@@ -56,11 +56,23 @@
 #include "dbasePlannerDlg.h"
 #include "graspCaptureDlg.h"
 
+#include <include/EGPlanner/egPlanner.h>
+#include <include/EGPlanner/simAnnPlanner.h>
+#include <include/EGPlanner/searchState.h>
+#include <include/EGPlanner/energy/searchEnergy.h>
+#include <include/EGPlanner/energy/contactEnergy.h>
+
+#include "quality.h"
+#include <unistd.h>
+
+
 //#define GRASPITDBG
 #include "debug.h"
 
 //#define PROF_ENABLED
 #include "profiling.h"
+
+GraspitDBModel * DBaseDlg::mCurrentLoadedModel = NULL;
 
 /*! Initializes the dialog and also gets the one and only manager from the
 	GraspitGUI. If this manager is already set, it also loads the model 
@@ -80,6 +92,9 @@ void DBaseDlg::init()
 	sortBox->insertItem("Epsilon");
 	sortBox->insertItem("Volume");
 	sortBox->insertItem("Energy");
+
+    std::cout << "in dbaseDlg.cpp, automatically calling connectButton_clicked()" << std::endl;
+    connectButton_clicked();
 }
 
 void DBaseDlg::destroy()
@@ -177,6 +192,17 @@ void DBaseDlg::connectButton_clicked()
 		mDBMgr = NULL;
 	}
 	graspItGUI->getIVmgr()->setDBMgr(mDBMgr);
+
+
+    modelsComboBox->setCurrentIndex(3055);
+    loadModelButton_clicked();
+
+//    typesComboBox->setCurrentIndex(6);
+//    loadGraspButton_clicked();
+
+//    int graspIdx = 9;
+//    for (int i= 0; i<graspIdx; i++)
+//        nextGrasp();
 }
 
 PROF_DECLARE(GET_GRASPS);
@@ -580,4 +606,760 @@ inline void DBaseDlg::deleteVectorElements(std::vector<vectorType>& v){
 		delete (treatAsType)v[i];
 	}
 	v.clear();
+}
+
+
+
+// Comparator for sorting contacts + virtual contacts
+struct contactComparator {
+    static bool compare(vec3 v1, vec3 v2) {
+        // sort x then z then y least to greatest
+        if (v1.x() == v2.x()) {
+            if (v1.z() == v2.z()) {
+                return v1.y() < v2.y();
+            } else {
+                return v1.z() < v2.z();
+            }
+        } else {
+            return v1.x() < v2.x();
+        }
+    }
+};
+
+void
+DBaseDlg::saveBinvoxFromVoxVec(QString fileName, std::vector<bool> *voxVec) {
+
+    Binvox *b = mCurrentLoadedModel->getBinvox();
+
+    // Open file for output
+    std::ofstream binvoxOutput(fileName.toStdString().c_str(), std::ios::out | std::ios::binary);
+
+    if (binvoxOutput.is_open())
+    {
+        binvoxOutput << "#binvox 1\n";
+
+        binvoxOutput << "dim " << b->depth << " " << b->height << " " << b->width << "\n";
+        binvoxOutput << "translate " << b->tx << " " << b->ty << " " << b->tz << "\n";
+        binvoxOutput << "scale " << b->scale << "\n";
+
+        binvoxOutput << "data\n";
+
+        bool value = 0;
+        int count = 0;
+        for (unsigned int i=0; i < voxVec->size(); i++) {
+            if (voxVec->at(i)) {
+                if (value && count == 255) {
+                    count = 1;
+                    binvoxOutput << (unsigned char)1 << (unsigned char)255;
+                } else if (value) {
+                    count++;
+                } else if (!value) {
+                    value = 1;
+                    binvoxOutput << (unsigned char)0 << (unsigned char)count;
+                    count = 1;
+                }
+            } else {
+                if (!value && count == 255) {
+                    count = 1;
+                    binvoxOutput << (unsigned char)0 << (unsigned char)255;
+                } else if (!value) {
+                    count++;
+                } else if (value) {
+                    value = 0;
+                    binvoxOutput << (unsigned char)1 << (unsigned char)count;
+                    count = 1;
+                }
+            }
+        }
+
+        // remaining count
+        if (!value) {
+            binvoxOutput << (unsigned char)0 << (unsigned char)count;
+        } else {
+            binvoxOutput << (unsigned char)1 << (unsigned char)count;
+        }
+
+        // Done!
+        binvoxOutput.close();
+
+    } else {
+        QTWARNING("could not open " + fileName + "for writing");
+    }
+}
+
+void
+DBaseDlg::saveBinvoxOfContacts(QString fileName, std::vector<vec3> contactLocs) {
+    Binvox *b = mCurrentLoadedModel->getBinvox();
+    double dbModelRescale = mCurrentLoadedModel->RescaleFactor();
+    DBGA("b->scale, b->tx , b->ty , b->tz: " << b->scale <<"," << b->tx <<"," << b->ty << ","<< b->tz);
+
+    //  Dump contacts to binvox
+    std::vector<bool> voxVec;
+    int y, z, x;
+    double nym, nyM, nzm, nzM, nxm, nxM; // min and max dims of each binvox point
+    unsigned int currentContactIndex = 0;
+
+    // check if there's any contact in contactLocs list
+    if (contactLocs.size() == 0){
+        for (int i=0; i < b->size; i++)
+            voxVec.push_back(0);
+
+    }
+    else {
+
+        vec3 currentContact = contactLocs.at(currentContactIndex);
+        vec3 *currentContactScaled = new vec3((currentContact.x()/dbModelRescale / b->scale - b->tx/ b->scale),
+                                              (currentContact.y()/dbModelRescale / b->scale - b->ty/ b->scale),
+                                              (currentContact.z()/dbModelRescale / b->scale - b->tz/ b->scale));
+        //    vec3 *currentContactScaled = new vec3((currentContact.x()/dbModelRescale - b->tx) / b->scale,
+        //                                          (currentContact.y()/dbModelRescale - b->ty) / b->scale,
+        //                                          (currentContact.z()/dbModelRescale - b->tz) / b->scale);
+        for (int i=0; i < b->size; i++){
+            // int index = x * wxh + z * width + y;  // wxh = width * height = d * d
+            // from http://www.cs.princeton.edu/~min/binvox/binvox.html
+            // note: this might not work if w,h,d aren't all =
+            x = i / b->width / b->height;
+            z = (i % (b->width * b->height)) / b->depth;
+            y = (i % (b->width * b->height)) % b->depth;
+
+            //binvox normalizes coords to fit inside a 1.0x1.0x1.0 cube
+            nym = (double)y / (double)b->depth;
+            nzm = (double)z / (double)b->height;
+            nxm = (double)x / (double)b->width;
+
+            nyM = nym + (1.0 / (double)b->depth);
+            nzM = nzm + (1.0 / (double)b->height);
+            nxM = nxm + (1.0 / (double)b->width);
+
+            if (i ==73267)
+                int wait =50000;
+            if ( (currentContactIndex < contactLocs.size()) && (
+                     currentContactScaled->y() > 1.0 ||
+                     currentContactScaled->x() > 1.0 ||
+                     currentContactScaled->z() > 1.0)
+                 ){
+                DBGA("removing contact that is outside unit cube");
+                DBGA("currentContactScaled  x, y, z: " << currentContactScaled->x() << " , " << currentContactScaled->y() << " , "<< currentContactScaled->z());
+                delete currentContactScaled;
+                currentContactIndex++;
+                if (currentContactIndex == contactLocs.size()) {
+                    continue;
+                }
+
+                currentContact = contactLocs.at(currentContactIndex);
+                currentContactScaled = new vec3((currentContact.x()/dbModelRescale / b->scale - b->tx/ b->scale),
+                                                (currentContact.y()/dbModelRescale / b->scale - b->ty/ b->scale),
+                                                (currentContact.z()/dbModelRescale / b->scale - b->tz/ b->scale));
+
+                //            currentContactScaled = new vec3((currentContact.x()/dbModelRescale - b->tx) / b->scale,
+                //                                            (currentContact.y()/dbModelRescale - b->ty) / b->scale,
+                //                                            (currentContact.z()/dbModelRescale - b->tz) / b->scale);
+            }
+
+            if ( (currentContactIndex < contactLocs.size()) &&
+                 ((nym <= currentContactScaled->y()) && (currentContactScaled->y() <= nyM)) &&
+                 ((nzm <= currentContactScaled->z()) && (currentContactScaled->z() <= nzM)) &&
+                 ((nxm <= currentContactScaled->x()) && (currentContactScaled->x() <= nxM)) ) {
+
+                voxVec.push_back(1);
+                DBGA("Added! index: " << i <<" currentContactScaled  x, y, z: " << currentContactScaled->x() << " , " << currentContactScaled->y() << " , "<< currentContactScaled->z());
+
+
+                delete currentContactScaled;
+                currentContactIndex++;
+                if (currentContactIndex == contactLocs.size()) {
+                    continue;
+                }
+
+                currentContact = contactLocs.at(currentContactIndex);
+
+                currentContactScaled = new vec3((currentContact.x()/dbModelRescale / b->scale - b->tx/ b->scale),
+                                                (currentContact.y()/dbModelRescale / b->scale - b->ty/ b->scale),
+                                                (currentContact.z()/dbModelRescale / b->scale - b->tz/ b->scale));
+                //            currentContactScaled = new vec3((currentContact.x()/dbModelRescale + b->tx) * b->scale,
+                //                                            (currentContact.y()/dbModelRescale + b->ty) * b->scale,
+                //                                            (currentContact.z()/dbModelRescale + b->tz) * b->scale);
+
+
+            } else {
+                voxVec.push_back(0);
+            }
+        }
+        if (currentContactIndex != contactLocs.size()){
+            DBGA("voxvec did not finish properly..." << currentContactIndex << " , " << contactLocs.size());
+            DBGA("currentContactScaled  x, y, z: " << currentContactScaled->x() << " , " << currentContactScaled->y() << " , "<< currentContactScaled->z());
+        }
+    }
+
+    saveBinvoxFromVoxVec(fileName, &voxVec);
+}
+
+///*! Direct computes the index locations of the finger tip position in the binvox files
+// * Returns the vector of binvox vector
+//*/
+//void
+//DBaseDlg::saveBinvoxOfContactsDirectIndex(QString fileName, std::vector<vec3> contactLocs) {
+//    Binvox *b = mCurrentLoadedModel->getBinvox();
+//    double dbModelRescale = mCurrentLoadedModel->RescaleFactor();
+//    DBGA("b->scale, b->tx , b->ty , b->tz: " << b->scale <<"," << b->tx <<"," << b->ty << ","<< b->tz);
+
+//    //  Dump contacts to binvox
+//    std::vector<bool> voxVec;
+
+//    for (int i=0; i < b->size; i++)
+//        voxVec.push_back(0);
+
+//    for (unsigned int j = 0; j < contactLocs.size(); j++){
+//        vec3 currentContact = contactLocs.at(j);
+//        vec3 *currentContactScaled = new vec3((currentContact.x()/dbModelRescale / b->scale - b->tx),
+//                                          (currentContact.y()/dbModelRescale / b->scale - b->ty),
+//                                          (currentContact.z()/dbModelRescale / b->scale - b->tz));
+////        int vox_index = (currentContactScaled[1] + currentContactScaled[2] * b->depth  + currentContactScaled[0] * b->depth * b->width) ;
+//        unsigned int vox_index = (currentContactScaled->y() + currentContactScaled->z() * b->depth  + currentContactScaled->z() * b->depth * b->width) ;
+
+//        DBGA("Invalid contact location; exceeds binvox box"<< vox_index << " , " << voxVec.size());
+//        if (vox_index < voxVec.size())
+//            voxVec[vox_index] = 1;
+//        else
+//            DBGA("Invalid contact location; exceeds binvox box");
+//    }
+
+//    saveBinvoxFromVoxVec(fileName, &voxVec);
+//}
+
+
+
+
+/*! Direct computes the index locations of the finger tip position in the binvox files
+ * Returns the vector of binvox vector
+*/
+int
+DBaseDlg::saveBinvoxOfContactsDirectIndex(QString fileName, std::vector<vec3> contactLocs) {
+    Binvox *b = mCurrentLoadedModel->getBinvox();
+    double dbModelRescale = mCurrentLoadedModel->RescaleFactor();
+    DBGA("b->scale, b->tx , b->ty , b->tz: " << b->scale <<"," << b->tx <<"," << b->ty << ","<< b->tz);
+
+    //  Dump contacts to binvox
+    std::vector<bool> voxVec;
+    int num_points = 0;
+
+    for (int i=0; i < b->size; i++)
+        voxVec.push_back(0);
+
+
+    for (int j = 0; j < contactLocs.size(); j++){
+        vec3 currentContact = contactLocs.at(j);
+
+//        // scaling by dbModelRescale returns it back to the original scale of the off file before binvoxing
+//        vec3 *currentContactScaled = new vec3(((currentContact.x()/dbModelRescale + b->tx) * b->scale),
+//                                          ((currentContact.y()/dbModelRescale + b->ty) * b->scale),
+//                                          ((currentContact.z()/dbModelRescale + b->tz) * b->scale));
+
+
+
+        // the next line is only used when the model binvox file has context around it.
+        // The expression above works for the original binvox inmplementation
+        DBGA("Check that the model binvox files used have context i.e. the _mc_ binvox files")
+        vec3 *currentContactScaled = new vec3(((currentContact.x()/dbModelRescale - b->tx) / b->scale),
+                                          ((currentContact.y()/dbModelRescale - b->ty) / b->scale),
+                                          ((currentContact.z()/dbModelRescale - b->tz) / b->scale));
+
+        // get direct index
+        int vox_index = (int(currentContactScaled->y()* b->width)+
+                         int(currentContactScaled->z()* b->depth) *b->width  +
+                         int(currentContactScaled->x()* b->height) *b->depth*b->width) ;
+
+        //int vox_index = (currentContactScaled->y()*b->width + currentContactScaled->z() *b->height*b->width + currentContactScaled->x()  *b->depth*b->height*b->width) ;
+
+        DBGA(currentContactScaled->y() << ", "<< currentContactScaled->z() << ", " << currentContactScaled->x() <<"\t: " << vox_index);
+
+
+        if((currentContactScaled->y()<0) || (currentContactScaled->z()<0) || (currentContactScaled->x()<0)
+                || (currentContactScaled->y()>1) || (currentContactScaled->z()>1) || (currentContactScaled->x()>1)){
+            DBGA("Negative value \t outside the binvox file" << currentContactScaled->y() << ", "<< currentContactScaled->z() << ", " << currentContactScaled->x());
+            continue;
+
+        }
+
+        if (vox_index < voxVec.size()){
+            voxVec[vox_index] = 1;
+            num_points++;
+        }
+        else
+            DBGA("Invalid contact location; exceeds binvox box"<< vox_index << " , " << voxVec.size());
+    }
+
+    saveBinvoxFromVoxVec(fileName, &voxVec);
+    return num_points;
+}
+
+
+
+
+/*! Gets the current contact point location of the fingers on the object.
+ * Return the list of the locations in the object's frame of refrence
+*/
+std::vector<vec3>
+DBaseDlg::getContactPointsLocationsFromHand() {
+
+    World *w = graspItGUI->getIVmgr()->getWorld();
+
+    // Get contacts
+    transf bodyInWorld = w->getGB(0)->getTran();
+
+    w->getHand(0)->getGrasp()->collectContacts();
+    double cPos[3];
+    std::vector<vec3> contactLocations;
+    for (int i=0; i<w->getHand(0)->getGrasp()->getNumContacts(); i++) {
+        Contact *c = w->getHand(0)->getGrasp()->getContact(i);
+        c->getLocation().get(cPos);
+        assert(false);
+        // Need to use getWorldLocation otherwise you're just
+        // returning the location in the frame of ref in the world
+        // and the following transformation doesn't do anything
+        transf contactInWorld(Quaternion::IDENTITY, vec3(cPos));
+        transf contactInBody = bodyInWorld.inverse() * contactInWorld;
+        contactLocations.push_back(contactInBody.translation());
+        // Uncomment the following lines to see the placement of contacts as spheres in the scene
+        //Body * tempBody = w->importBody("Body","/home/iakinola/graspit/models/objects/sphere.xml");
+        //tempBody->setTran(contactInBody);
+    }
+    std::sort(contactLocations.begin(), contactLocations.end(), contactComparator::compare);
+    return contactLocations;
+}
+
+
+
+/*! Gets the current virtual contact point location of the fingers on the object.
+ * Return the list of the locations in the object's frame of refrence
+*/
+std::vector<vec3>
+DBaseDlg::getVirtualContactPointsLocationsFromHand() {
+
+    World *w = graspItGUI->getIVmgr()->getWorld();
+
+    transf bodyInWorld = w->getGB(0)->getTran();
+    w->getHand(0)->getGrasp()->collectVirtualContacts();
+    VirtualContact *vc;
+    double vcPos[3];
+    std::vector<vec3> vcLocations;
+    for (int i=0; i<w->getHand(0)->getGrasp()->getNumContacts(); i++) {
+        vc = (VirtualContact*)w->getHand(0)->getGrasp()->getContact(i);
+        vc->getWorldLocation().get(vcPos);
+        transf contactInWorld(Quaternion::IDENTITY, vec3(vcPos));
+        transf contactInBody = bodyInWorld.inverse() * contactInWorld;
+        vcLocations.push_back(contactInBody.translation());
+        // Uncomment the following lines to see the placement of contacts as spheres in the scene
+        //Body * tempBody = w->importBody("Body","/home/iakinola/graspit/models/objects/sphere.xml");
+        //tempBody->setTran(contactInBody);
+    }
+    std::sort(vcLocations.begin(), vcLocations.end(), contactComparator::compare);
+    DBGA("Number of contact locations. \t" << vcLocations.size());
+    return vcLocations;
+}
+
+
+
+/*! Gets the current contact point location of the fingers on the object.
+ * Return the list of the locations in the object's frame of refrence
+*/
+std::vector<vec3>
+DBaseDlg::getContactPointsLocationsFromObject() {
+
+    World *w = graspItGUI->getIVmgr()->getWorld();
+
+    // this portion deals directly with the object.
+    w->getHand(0)->getGrasp()->collectContacts();
+    std::list<Contact*> contactList = w->getGB(0)->getContacts();       // get the list of Contacts on the object
+
+    DBGA("There are  " << contactList.size() << " contacts in contactList.... Ireti debugging");
+
+    double vcPos[3];
+    std::vector<vec3> contactLocations;
+    std::list<Contact*>::const_iterator it;
+
+    for (it = contactList.begin(); it!=contactList.end(); it++) {
+            (*it)->getLocation().get(vcPos);
+            contactLocations.push_back(vec3 (vcPos));
+
+            DBGA("Contact location-- x: " << vcPos[0] << ", y: " << vcPos[1] << ", z: " << vcPos[2] << " contacts in contactList.... Ireti debugging");
+            //Uncomment the following lines to see the placement of contacts as spheres in the scene
+            //Body * tempBody = w->importBody("Body","/home/iakinola/graspit/models/objects/sphere.xml");
+            //transf contactTran(Quaternion::IDENTITY, vcPos);
+            //tempBody->setTran(contactTran);
+    }
+
+    if (contactLocations.size()!=0)
+        std::sort(contactLocations.begin(), contactLocations.end(), contactComparator::compare);
+    else
+        DBGA("There are not contact points in this instance" << w->getGB(0)->getFilename().toStdString());
+    return contactLocations;
+}
+
+
+/*! Saves the current hand configuration in a binvox with dimensions
+matching the currently loaded graspable body.
+Note: This function can only be run when there is one robot (a hand)
+in the scene and only on graspable body that also must have a binvox
+member variable loaded.
+*/
+void
+DBaseDlg::saveBinvoxButton_clicked() {
+
+    World *w = graspItGUI->getIVmgr()->getWorld();
+
+    if (w->getNumHands() != 1) {
+        QTWARNING("saveHandVox: There can only be one hand loaded in the world when exporting a binvox.");
+        return;
+    } else if (w->getNumGB() != 1) {
+        QTWARNING("saveHandVox: There can only be one graspable body loaded in the world when exporting a binvox.");
+        return;
+    } else if (!mCurrentLoadedModel->binvoxLoaded()) {
+        QTWARNING("saveHandVox: Body does not have a .binvox loaded.");
+        return;
+    } else if (mCurrentLoadedModel->getBinvox()->version != 1) {
+        QTWARNING("saveHandVox: Loaded .binvox is not version 1. We only support version 1 of binvox.");
+        return;
+    }
+
+
+    QString fileName ="";
+    QString fn = QFileDialog::getSaveFileName(this, QString(), QString(getenv("GRASPIT")),
+                                              "Binvox Files (*.binvox)" );
+    if ( !fn.isEmpty() ) {
+      fileName = fn;
+      if (fileName.section('.',1).isEmpty()) {
+        fileName.append(".binvox");
+      }
+
+    } else {
+        QTWARNING("Error saving binvox... you didn't name it properly...");
+        return;
+    }
+
+//    saveBinvoxOfContacts(fileName, getVirtualContactPointsLocationsFromHand());
+    saveBinvoxOfContacts(fileName, getContactPointsLocationsFromObject());
+}
+
+
+/*! re-evaluates the grasp quality on the grasp loaded from database
+*/
+energyValues DBaseDlg::evaluateGraspInDB(int graspIndexInDB)
+{
+    Hand *mHand = graspItGUI->getIVmgr()->getWorld()->getCurrentHand();
+    GraspPlanningState gps = static_cast<GraspitDBGrasp*>(mGraspList[graspIndexInDB])->getFinalGraspPlanningState();
+    gps.execute(mHand);
+//    gps.getEnergy();//    gps.getVolume();//            gps.getEpsilonQuality();
+
+
+    mHand->autoGrasp(true);
+    //    mHand->autoGrasp(render_it, 1.0, false);
+
+    SearchEnergy *mEnergyCalculator = SearchEnergy::getSearchEnergy(ENERGY_CONTACT_QUALITY);
+    mEnergyCalculator->setContactType(CONTACT_PRESET); //CONTACT_LIVE, CONTACT_PRESET
+
+    bool is_legal;
+    double new_planned_energy;
+
+    mEnergyCalculator->analyzeCurrentPosture(mHand,graspItGUI->getMainWorld()->getGB(0),is_legal,new_planned_energy,false );
+    //    gps.setEnergy(new_planned_energy);
+
+    QualEpsilon *mQualEpsilon;
+    mQualEpsilon = new QualEpsilon(mHand->getGrasp(), QString("Grasp_recorder_qm"), "L1 Norm");
+    double quality = mQualEpsilon->evaluate();
+
+    QualVolume *mQualVolume;
+    mQualVolume = new QualVolume(mHand->getGrasp(), QString("Grasp_recorder_qm"), "L1 Norm");
+
+    energyValues ev = {new_planned_energy,
+                        mQualEpsilon->evaluate(),
+                        mQualVolume->evaluate(),
+                        gps.getEpsilonQuality(),
+                        gps.getVolume()};
+    delete mQualEpsilon;
+    delete mQualVolume;
+
+    return ev;
+/*
+    DBGA("Calculated grasp: new_planned_energy \t" <<  new_planned_energy<< " , mQualEpsilon \t"
+         << mQualEpsilon->evaluate() << " , mQualVolume \t" <<mQualVolume->evaluate());
+
+    return new_planned_energy;*/
+}
+
+/*! re-evaluates the grasp quality on the grasp loaded from database
+*/
+energyValues DBaseDlg::perturbAndEvaluateGraspInDB(int graspIndexInDB)
+{
+    bool render_it = true;
+
+    Hand *mHand = graspItGUI->getIVmgr()->getWorld()->getCurrentHand();
+    GraspPlanningState gps = static_cast<GraspitDBGrasp*>(mGraspList[graspIndexInDB])->getFinalGraspPlanningState();
+    gps.setObject(graspItGUI->getMainWorld()->getGB(0));
+
+    //disable collisions
+    graspItGUI->getMainWorld()->toggleAllCollisions(false);
+    usleep(10000);
+    gps.execute(mHand);
+
+    if(render_it)           //visualize initial state
+    {
+        graspItGUI->getIVmgr()->getViewer()->render();
+        usleep(1000000);
+    }
+
+    //mHand->quickOpen();
+    mHand->autoGrasp(true, -10.0, false);       // open hand
+    if(render_it)
+    {
+        graspItGUI->getIVmgr()->getViewer()->render();
+        usleep(1000000);
+    }
+
+    mHand->approachToContact(-200.0);           // withdraw hand from object
+    if(render_it)
+    {
+        graspItGUI->getIVmgr()->getViewer()->render();
+        usleep(1000000);
+    }
+
+    // shift the hand a bit to create another grasp angle
+    double max_displacement = -50.;
+    double deltax = ((double) rand() / (RAND_MAX)) * max_displacement/2;
+    double deltay = ((double) rand() / (RAND_MAX)) * max_displacement/2;
+    double deltaz = ((double) rand() / (RAND_MAX)) * max_displacement*2;
+    DBGA("random displacements \t" << deltax << " , " << deltay << " , " << deltaz);
+    transf newTran = translate_transf(vec3(deltax,deltay,deltaz) * mHand->getApproachTran()) * mHand->getTran();
+
+    // move the hand to a new location
+    //    moveTo(transf &newTran,double translStepSize, double rotStepSize);
+    mHand->moveTo(newTran, WorldElement::ONE_STEP, WorldElement::ONE_STEP);      //(transf &newTran,double translStepSize, double rotStepSize)
+    if(render_it)
+    {
+        graspItGUI->getIVmgr()->getViewer()->render();
+        usleep(1000000);
+    }
+
+    graspItGUI->getMainWorld()->toggleAllCollisions(true);      // activate collisions
+    double dist = mHand->getApproachDistance(graspItGUI->getMainWorld()->getGB(0), 300);
+    DBGA("New dustance to object: \t" << dist);
+    //dist = 200
+    mHand->approachToContact(dist);                              // move to object until collision
+    if(render_it)
+    {
+        graspItGUI->getIVmgr()->getViewer()->render();
+        usleep(1000000);
+    }
+
+    if(render_it)
+    {
+        graspItGUI->getIVmgr()->getViewer()->render();
+        usleep(1000000);
+    }
+    mHand->autoGrasp(render_it, 1.0, false);                    // grasp object
+
+    if(render_it)
+    {
+        graspItGUI->getIVmgr()->getViewer()->render();
+        usleep(1000000);
+    }
+
+    // Analyse grasp
+    ContactEnergy *mEnergyCalculator = new ContactEnergy();
+    mEnergyCalculator->setContactType(CONTACT_PRESET);
+    //mEnergyCalculator->analyzeCurrentPosture(mHand, graspItGUI->getMainWorld()->getGB(0));
+
+
+//    SearchEnergy *mEnergyCalculator = new SearchEnergy();
+//    mEnergyCalculator->setType(ENERGY_CONTACT_QUALITY);  //ENERGY_POTENTIAL_QUALITY
+//    mEnergyCalculator->setContactType(CONTACT_PRESET); //CONTACT_LIVE, CONTACT_PRESET
+
+    bool is_legal;
+    double new_planned_energy;
+    mEnergyCalculator->analyzeCurrentPosture(mHand,graspItGUI->getMainWorld()->getGB(0),is_legal,new_planned_energy,false );
+    gps.setEnergy(new_planned_energy);
+
+    QualEpsilon *mQualEpsilon;
+    mQualEpsilon = new QualEpsilon(mHand->getGrasp(), QString("Grasp_recorder_qm"), "L1 Norm");
+    double epsilonQuality = mQualEpsilon->evaluate();
+
+    QualVolume *mQualVolume;
+    mQualVolume = new QualVolume(mHand->getGrasp(), QString("Grasp_recorder_qm"), "L1 Norm");
+    double volumeQuality = mQualVolume->evaluate();
+
+//    gps.setEnergy();
+
+
+    DBGA("Calculated grasp: new_planned_energy \t" <<  new_planned_energy
+         << " , mQualEpsilon \t" << mQualEpsilon->evaluate()
+         << " , mQualVolume \t" <<mQualVolume->evaluate()
+         << " , gps.getEpsilonQuality() \t" << gps.getEpsilonQuality()
+         << " , gps.getVolume() \t" <<gps.getVolume());
+
+    energyValues ev = {new_planned_energy,
+                        mQualEpsilon->evaluate(),
+                        mQualVolume->evaluate(),
+                        gps.getEpsilonQuality(),
+                        gps.getVolume()};
+
+    delete mQualEpsilon;
+    delete mQualVolume;
+
+    return ev;
+}
+
+
+
+
+
+
+
+/*! Saved .binvox representations for all grasps in the
+CGDB (for current category). Uses only objects where scale=1.0 in order to preserve
+the transformation between the fingertips and the object (since we only
+have the voxelized representation at scale 1.0)
+*/
+void
+DBaseDlg::runBatchBinvoxButton_clicked() {
+
+
+    DBGA("There are  " << classesComboBox->count() << " categories in database.... Ireti debugging");
+
+    for (int cat=0; cat < classesComboBox->count(); cat++) {
+        // set category
+        classesComboBox->setCurrentIndex(cat);
+        DBGA("Currently treating category:  " << cat << "  of  "<< classesComboBox->count() <<"   "<< classesComboBox->currentText().toStdString() << " category in database.... Ireti debugging");
+
+        std::string catNames[] = {"bottle", "book", "hammer", "ice_cream", "mug", "vase", "wrench"};
+        std::set<std::string> selectCategories(catNames, catNames + 7);
+
+        if (selectCategories.find(classesComboBox->currentText().toStdString()) != selectCategories.end()) {
+            DBGA("passed")
+        }
+        else{
+            DBGA("skipping category: " << classesComboBox->currentText().toStdString());
+            continue;
+        }
+
+        for (int i=0; i < modelsComboBox->count(); i++) {
+            // load the model
+            modelsComboBox->setCurrentIndex(i);
+            if (modelsComboBox->currentText().toStdString().substr(4,3) == "1.0") {
+                DBGA("current object: " << modelsComboBox->currentText().toStdString());
+            } else {
+                continue; // skip this model if it's not at the right scale...
+            }
+
+            loadModelButton_clicked();
+
+            // load the (EIGENGRASPS) grasQps
+            for (int t=0; t<typesComboBox->count(); t++) {
+                typesComboBox->setCurrentIndex(t);
+                if (typesComboBox->currentText().toStdString() == "EIGENGRASPS")
+                    break;
+            }
+            loadGraspButton_clicked();
+
+
+            // create directory to save the files corresponding to the current model.
+            QString path(QString(getenv("GRASPIT")) + QString("/binvoxes/") + QString(modelsComboBox->currentText()));
+            QDir dir(path.toStdString().c_str());
+            if (!dir.exists())
+                dir.mkpath(".");
+
+            // store location of the original binvox location
+            QString binvoxLocFilename(path + QString("/") + path.section('/',-1,-1) + QString(".location"));
+            QString binvoxLocation = QString(mCurrentLoadedModel->GeometryPath().c_str());
+            binvoxLocation = binvoxLocation.left(binvoxLocation.findRev('.')) +".binvox";
+
+            DBGA(" binvoxLocation " << binvoxLocation.toStdString()<< " .... Ireti debugging");
+            DBGA("binvoxLocFilename " << binvoxLocFilename.toStdString()<< " .... Ireti debugging");
+
+            std::ofstream binvoxLocFileOutput(binvoxLocFilename.toStdString().c_str(), std::ios::out | std::ios::binary);
+            if (binvoxLocFileOutput.is_open())
+            {
+                binvoxLocFileOutput << binvoxLocation.toStdString() << "\n";
+            } else {
+                QTWARNING("could not open " + binvoxLocFilename + "for writing");
+            }
+            binvoxLocFileOutput.close();
+
+            // go through the grasps for this model and save
+            for (unsigned int g=0; g<mGraspList.size(); g++) {
+
+                QString vcFilename(path + QString("/") + QString::number(g+1) + QString("_vc"));
+                QString binvoxVCFilename(vcFilename + QString(".binvox"));
+                QString qualityVCFilename(vcFilename + QString(".quality"));
+                //saveBinvoxOfContacts(binvoxCFilename, getContactPointsLocationsFromHand());
+                //            saveBinvoxOfContacts(binvoxVCFilename, getVirtualContactPointsLocationsFromHand());
+
+                saveBinvoxOfContacts(binvoxVCFilename, getContactPointsLocationsFromObject());
+
+                // also save the energy!
+                /*            std::ofstream qualityOutput(qualityVCFilename.toStdString().c_str(), std::ios::out | std::ios::binary);
+
+            if (qualityOutput.is_open())
+            {
+                qualityOutput << "epsilon_quality=" << mGraspList[g]->EpsilonQuality() << "\n";
+                qualityOutput << "volume_quality=" << mGraspList[g]->VolumeQuality() << "\n";
+                qualityOutput.close();
+            } else {
+                QTWARNING("could not open " + qualityVCFilename + "for writing");
+            }
+            qualityOutput.close();*/
+
+                // Re-evaluate Grasp Here
+
+                energyValues ev = evaluateGraspInDB(g);
+
+                std::ofstream qualityOutput(qualityVCFilename.toStdString().c_str(), std::ios::out | std::ios::binary);
+                if (qualityOutput.is_open())
+                {
+                    qualityOutput << "gpsEpsilon=" << ev.gpsEpsilon << "\n";
+                    qualityOutput << "gpsVolume=" << ev.gpsVolume << "\n";
+                    qualityOutput << "mQualEpsilon=" << ev.mQualEpsilon << "\n";
+                    qualityOutput << "mQualVolume=" << ev.mQualVolume << "\n";
+                    qualityOutput << "new_planned_energy=" << ev.new_planned_energy << "\n";
+
+                    qualityOutput.close();
+                } else {
+                    QTWARNING("could not open " + qualityVCFilename + "for writing");
+                }
+                qualityOutput.close();
+
+                for (int j=0; j<5; j++) {
+                    energyValues ev = perturbAndEvaluateGraspInDB(g);
+
+                    QString perturbedIndexString;
+                    std::ostringstream convert;
+                    convert << j;
+                    perturbedIndexString = QString(convert.str().c_str());
+
+                    DBGA("Warning: saving binvox file for perturbed grasp");
+                    QString perturbedGraspBinvoxFilename(vcFilename + QString("_") + perturbedIndexString + QString(".binvox"));
+                    saveBinvoxOfContacts(perturbedGraspBinvoxFilename, getContactPointsLocationsFromObject());
+
+                    QString perturbedQualityVCFilename(vcFilename + QString("_") + perturbedIndexString + QString(".quality"));
+                    std::ofstream preturbedGraspQualOut(perturbedQualityVCFilename.toStdString().c_str(), std::ios::out | std::ios::binary);
+
+                    if (preturbedGraspQualOut.is_open())
+                    {
+                        preturbedGraspQualOut << "gpsEpsilon=" << ev.gpsEpsilon << "\n";
+                        preturbedGraspQualOut << "gpsVolume=" << ev.gpsVolume << "\n";
+                        preturbedGraspQualOut << "mQualEpsilon=" << ev.mQualEpsilon << "\n";
+                        preturbedGraspQualOut << "mQualVolume=" << ev.mQualVolume << "\n";
+                        preturbedGraspQualOut << "new_planned_energy=" << ev.new_planned_energy << "\n";
+
+                        preturbedGraspQualOut.close();
+                    } else {
+                        QTWARNING("could not open perurbed grasp quality output file for writing");
+                    }
+                    preturbedGraspQualOut.close();
+
+                }
+
+                nextGraspButton_clicked(); //use this button to load the next grasp to save
+            }
+        }
+    }
 }

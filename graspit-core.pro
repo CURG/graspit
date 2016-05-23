@@ -96,6 +96,7 @@ HEADERS	+= include/body.h \
         include/EGPlanner/energy/guidedPotentialQualityEnergy.h \
         include/EGPlanner/energy/potentialQualityEnergy.h \
         include/EGPlanner/energy/closureSearchEnergy.h \
+        include/EGPlanner/energy/convNetEnergy.h \
 	include/EGPlanner/onLinePlanner.h \
 	include/EGPlanner/egPlanner.h \
 	include/EGPlanner/simAnnPlanner.h \
@@ -181,6 +182,7 @@ SOURCES	+= src/arch.cpp \
         src/EGPlanner/energy/guidedPotentialQualityEnergy.cpp \
         src/EGPlanner/energy/potentialQualityEnergy.cpp \
         src/EGPlanner/energy/closureSearchEnergy.cpp \
+        src/EGPlanner/energy/convNetEnergy.cpp \
 	src/EGPlanner/onLinePlanner.cpp \
 	src/EGPlanner/egPlanner.cpp \
 	src/EGPlanner/simAnnPlanner.cpp \
@@ -382,7 +384,8 @@ cgdb{
                      src/DBase/graspClusteringTask.cpp \
                      src/DBase/graspTransferCheckTask.cpp \
                      src/DBase/tableCheckTask.cpp \
-                     src/DBase/compliantGraspCopyTask.cpp 
+                     src/DBase/compliantGraspCopyTask.cpp \
+                     src/DBase/binvox\binvox.cpp 
 
 	HEADERS += src/DBase/dbaseDlg.h \
 		     src/DBase/dbasePlannerDlg.h \
@@ -402,7 +405,8 @@ cgdb{
                      src/DBase/graspClusteringTask.h \
                      src/DBase/graspTransferCheckTask.h \
                      src/DBase/tableCheckTask.h \
-                     src/DBase/compliantGraspCopyTask.h 
+                     src/DBase/compliantGraspCopyTask.h \
+                     src/DBase/binvox/binvox.h 
 
 	FORMS += src/DBase/dbaseDlg.ui \
 		   src/DBase/dbasePlannerDlg.ui

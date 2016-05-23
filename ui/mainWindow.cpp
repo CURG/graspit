@@ -189,6 +189,7 @@ void MainWindow::init()
   QIcon collisionIconSet = mUI->elementCollisionToggleAction->iconSet();
   collisionIconSet.setPixmap(load_pixmap("nocollide.xpm"),QIcon::Automatic,QIcon::Normal,QIcon::On);
   mUI->elementCollisionToggleAction->setIconSet(collisionIconSet);
+
 }
 
 /*!

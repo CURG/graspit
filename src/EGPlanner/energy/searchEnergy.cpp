@@ -49,6 +49,8 @@
 #include "include/EGPlanner/energy/strictAutoGraspEnergy.h"
 #include "include/EGPlanner/energy/closureSearchEnergy.h"
 
+#include "include/EGPlanner/energy/convNetEnergy.h"
+
 //#define GRASPITDBG
 #include "debug.h"
 
@@ -216,6 +218,9 @@ SearchEnergy * SearchEnergy::getSearchEnergy(SearchEnergyType type)
         break;
     case ENERGY_CLOSURE:
         se =  new ClosureSearchEnergy();
+        break;
+    case ENERGY_BINVOX_CONVNET:
+        se =  new ConvNetEnergy();
         break;
     default:
         std::cout << "INVALID SEARCH ENERGY TYPE: " <<  type << std::endl;

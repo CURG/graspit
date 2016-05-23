@@ -33,10 +33,19 @@
 #include "ui_dbaseDlg.h"
 #include <map>
 #include <QDialog>
+#include "matvec3D.h"
 
 class GraspitDBGrasp;
 class GraspitDBModel;
 class Hand;
+
+struct energyValues {
+    double new_planned_energy;
+    double mQualEpsilon;
+    double mQualVolume;
+    double gpsEpsilon;
+    double gpsVolume;
+};
 
 namespace db_planner {
 	class DatabaseManager;
@@ -53,8 +62,6 @@ class DBaseDlg : public QDialog, public Ui::DBaseDlgUI
 {
 	Q_OBJECT
 private:
-	//! The last model from the dbase that has been added to the Graspit world
-	GraspitDBModel *mCurrentLoadedModel;
 	//! Widget for displaying thumbnails
 	QGraphicsScene * mModelScene;
 	//! The mgr that all connections to the dbase have to go through
@@ -94,8 +101,14 @@ private:
 	//! Helper function that sets grasp's information texts to default
 	void initializeGraspInfo();
 
+
+    energyValues evaluateGraspInDB(int graspIndexInDB);
+    energyValues perturbAndEvaluateGraspInDB(int graspIndexInDB);
+
+
 public:
-    DBaseDlg(QWidget *parent = 0) : QDialog(parent), mCurrentLoadedModel(NULL),mModelScene(NULL),
+
+    DBaseDlg(QWidget *parent = 0) : QDialog(parent),mModelScene(NULL),
         mDBMgr(NULL), mCurrentFrame(0), inModelConstruction(false)
     {
 		setupUi(this);
@@ -108,16 +121,27 @@ public:
 		QObject::connect(plannerButton, SIGNAL(clicked()), this, SLOT(plannerButton_clicked()));
 		QObject::connect(createGWSButton, SIGNAL(clicked()), this, SLOT(createGWSButton_clicked()));
 		QObject::connect(sortButton, SIGNAL(clicked()), this, SLOT(sortButton_clicked()));
-		QObject::connect(showMarkersBox, SIGNAL(clicked()), this, SLOT(showMarkers()));
+        QObject::connect(showMarkersBox, SIGNAL(clicked()), this, SLOT(showMarkers()));
 
 		QObject::connect(modelsComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(modelChanged()));
 		QObject::connect(classesComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(classChanged()));
 		QObject::connect(showPreGraspRadioButton, SIGNAL(toggled(bool)), this, SLOT(graspTypeChanged()));
 		QObject::connect(showFinalGraspRadioButton, SIGNAL(toggled(bool)), this, SLOT(graspTypeChanged()));
 
+        QObject::connect(saveBinvoxButton, SIGNAL(clicked()), this, SLOT(saveBinvoxButton_clicked()));
+        QObject::connect(runBatchBinvoxButton, SIGNAL(clicked()), this, SLOT(runBatchBinvoxButton_clicked()));
 		init();
 	}
 	~DBaseDlg(){destroy();}
+
+    //! The last model from the dbase that has been added to the Graspit world
+    static GraspitDBModel *mCurrentLoadedModel;
+    static void saveBinvoxOfContacts(QString fileName, std::vector<vec3> contactLocs);
+    static int saveBinvoxOfContactsDirectIndex(QString fileName, std::vector<vec3> contactLocs);
+    static std::vector<vec3> getContactPointsLocationsFromObject();
+    static std::vector<vec3> getContactPointsLocationsFromHand();
+    static std::vector<vec3> getVirtualContactPointsLocationsFromHand();
+    static void saveBinvoxFromVoxVec(QString fileName, std::vector<bool> *voxVec);
 
 public Q_SLOTS:
 	//! Button events
@@ -135,5 +159,9 @@ public Q_SLOTS:
 	void modelChanged();
 	void graspTypeChanged();
 	void classChanged();
+
+    void saveBinvoxButton_clicked();
+    void runBatchBinvoxButton_clicked();
+
 };
 #endif

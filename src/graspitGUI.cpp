@@ -105,6 +105,9 @@ GraspItGUI::GraspItGUI(int argc,char **argv) : mDispatch(NULL)
     mExitCode = 0;
     initResult = processArgs(argc,argv);
   }
+
+  std::cout << "In graspitGUI.cpp, calling dbaseGUIAction_activated to autostart DB connection." << std::endl;
+  mainWindow->dbaseGUIAction_activated();
 }
 
 /*!

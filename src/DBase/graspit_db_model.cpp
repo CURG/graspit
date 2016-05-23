@@ -67,6 +67,28 @@ int GraspitDBModel::loadGeometry()
 	}
 }
 
+
+int GraspitDBModel::loadBinvox()
+{
+    if (mBinvox) delete mBinvox;
+    mBinvox = new Binvox();
+
+    QString filename = QString(GeometryPath().c_str());
+    DBGA("loadbinvox3");
+
+    //    QString binvoxFilename = QString(filename.section('.',0,-2)) + QString("_50.binvox");
+    QString binvoxFilename = QString(filename.section('.',0,-2)) + QString("_mc_50.binvox");
+    DBGA("Trying to side-load 50^3 binvox: " << binvoxFilename.toStdString());
+
+    if (!mBinvox->read_binvox(binvoxFilename.toStdString())) {
+        DBGA("Error reading [" << binvoxFilename.toStdString() << "]");
+        delete mBinvox;
+        mBinvox = NULL;
+        return -1;
+    }
+    return 1;
+}
+
 int GraspitDBModel::load(World* w)
 {
 	// delete the previously loaded graspabody
@@ -88,6 +110,21 @@ int GraspitDBModel::load(World* w)
 		mGeometryLoaded = false;
 		return FAILURE;
 	}
+
+    // also load binvox info to cache
+    // not sure why we need to keep the entire binvox loaded.
+    // May be getting just the relevant header info about the binvox file would suffice.
+
+    int loadBinvoxResult = loadBinvox();
+    if (loadBinvoxResult == -1) {
+        DBGA("GraspitDBModel: No .binvox file found for current model");
+    } else if (loadBinvoxResult == 0) {
+        DBGA("GraspitDBModel: Error parsing .binvox file for current model");
+    } else {
+        mBinvoxLoaded = true;
+    }
+
+
 	mGeometryLoaded = true;
 	mGraspableBody->addIVMat();
 
