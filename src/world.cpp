@@ -38,6 +38,9 @@
 #include <QDateTime>
 #include <QTextStream>
 #include <Inventor/sensors/SoIdleSensor.h>
+#include <QBuffer>
+#include <QUrl>
+#include <fileDownloader.h>
 
 #include "myRegistry.h"
 #include "matvecIO.h"
@@ -506,6 +509,57 @@ World::load(const QString &filename)
 		return FAILURE;
 	}
 	return SUCCESS;
+}
+
+int
+World::loadFromUrl(const QString &filename)
+{
+    QString graspitRoot = getenv("GRASPIT");
+    graspitRoot.replace("\\","/");
+    if (graspitRoot.at(graspitRoot.size()-1)!='/') {
+        graspitRoot += "/";
+    }
+
+    QString url = "https://raw.githubusercontent.com/graspit-simulator/graspit/master/worlds/barrettGlassDyn.xml";
+    QUrl world_url(url);
+    SyncHTTP h(world_url.host());
+    QString url_path = world_url.path();
+    // Prepare output buffer
+    QBuffer getOutput;
+    h.syncGet(url_path, &getOutput);
+    getOutput.open(QIODevice::ReadWrite);
+
+    char *fileData = new char(getOutput.size());
+
+    getOutput.read(fileData, getOutput.bytesAvailable());
+
+
+    std::cout << "I love tim!" << std::endl;
+    std::cout << fileData << std::endl;
+//    int fileSize = pArray.size();
+
+  //  memcpy(pData, pArray.data(), fileSize);
+
+
+    TiXmlDocument doc;
+
+    doc.Parse((const char*)fileData, 0, TIXML_ENCODING_UTF8);
+
+    //load the graspit specific information in XML format
+//    TiXmlDocument doc(filename);
+//    if(doc.LoadFile()==false){
+//        QTWARNING("Could not open file " + filename);
+//        return FAILURE;
+//    }
+    const TiXmlElement*  root = doc.RootElement();
+    if(root==NULL){
+        QTWARNING("Empty XML");
+        return FAILURE;
+    }
+    if (loadFromXml(root,graspitRoot) == FAILURE) {
+        return FAILURE;
+    }
+    return SUCCESS;
 }
 
 int

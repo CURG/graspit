@@ -365,6 +365,10 @@ public:
   //! Loads the saved world from the file in filename. 
   int load(const QString &filename);
 
+  //! Loads world from url
+  //! TODO: change filename to URL
+  int loadFromUrl(const QString &filename);
+
   //! Loads the saved world from the XML file in filename.
   int loadFromXml(const TiXmlElement* root,QString rootPath);
 
