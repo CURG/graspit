@@ -135,7 +135,8 @@ set (GRASPIT_INCLUDEDIR_HEADERS
     ${GSRC}/include/triangle_inl.h 
     ${GSRC}/include/triangle.h 
     ${GSRC}/include/worldElement.h 
-    ${GSRC}/include/worldElementFactory.h 
+    ${GSRC}/include/worldElementFactory.h
+    ${GSRC}/include/worldFactory.h 
     ${GSRC}/include/world.h 
     ${GSRC}/include/graspitGUI.h 
     ${GSRC}/include/graspitServer.h 
@@ -369,6 +370,7 @@ set (GRASPIT_CORE_SOURCES
     ${GSRC}/src/world.cpp 
     ${GSRC}/src/worldElement.cpp 
     ${GSRC}/src/worldElementFactory.cpp 
+    ${GSRC}/src/worldFactory.cpp 
     ${GSRC}/src/math/matrix.cpp 
     ${GSRC}/src/Collision/collisionInterface.cpp 
     ${GSRC}/src/Planner/grasp_visualization.cpp 

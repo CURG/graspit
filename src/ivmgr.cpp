@@ -107,6 +107,8 @@
 //hmmm not sure this is right
 #include "graspitGUI.h"
 
+#include <worldFactory.h>
+
 //#define GRASPITDBG
 #include "debug.h"
 
@@ -324,10 +326,12 @@ IVmgr::~IVmgr()
 void
 IVmgr::emptyWorld()
 {
+
+
   selectionRoot->deselectAll();
   selectionRoot->removeChild(world->getIVRoot());
   delete world;
-  world = new World(NULL, "MainWorld", this);
+  world = WorldFactory::newEmptyWorld(NULL, "MainWorld", this);
   //comment out here and where another world is created to stop using mutexes
   //world->setRenderMutex(&mRenderMutex);
   selectionRoot->addChild(world->getIVRoot());
