@@ -520,7 +520,7 @@ World::loadFromUrl(const QString &filename)
         graspitRoot += "/";
     }
 
-    QString url = "https://raw.githubusercontent.com/graspit-simulator/graspit/master/worlds/barrettGlassDyn.xml";
+    QString url = "http://borneo.cs.columbia.edu/worlds/barrettGlassDyn.xml";
     QUrl world_url(url);
     SyncHTTP h(world_url.host());
     QString url_path = world_url.path();
@@ -535,15 +535,15 @@ World::loadFromUrl(const QString &filename)
 
 
     std::cout << "I love tim!" << std::endl;
+
     std::cout << fileData << std::endl;
-//    int fileSize = pArray.size();
-
-  //  memcpy(pData, pArray.data(), fileSize);
-
+    // std::cout << QString(getOutput.read(getOutput.bytesAvailable())).toStdString().c_str() << std::endl;
 
     TiXmlDocument doc;
 
     doc.Parse((const char*)fileData, 0, TIXML_ENCODING_UTF8);
+    std::cout << "I am still alive" << std::endl;
+
 
     //load the graspit specific information in XML format
 //    TiXmlDocument doc(filename);
@@ -551,6 +551,8 @@ World::loadFromUrl(const QString &filename)
 //        QTWARNING("Could not open file " + filename);
 //        return FAILURE;
 //    }
+
+
     const TiXmlElement*  root = doc.RootElement();
     if(root==NULL){
         QTWARNING("Empty XML");
