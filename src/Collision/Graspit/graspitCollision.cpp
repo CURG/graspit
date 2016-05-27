@@ -149,6 +149,7 @@ GraspitCollision::activatePair(const Body* body1, const Body* body2, bool active
                 }
             }
         }
+
 	}
 }
 
