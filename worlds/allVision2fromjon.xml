@@ -28,7 +28,7 @@
 		<filename>models/robots/MicoGripper/MicoGripper.xml</filename>
 		<dofValues>+0.905708 +1.06572 +0 +0 </dofValues>
 		<transform>
-			<fullTransform>(-0.0165886 +0.523838 -0.850178 -0.0501643)[-117.539 +47.761 +364.056]</fullTransform>
+			<fullTransform>(-0.0165886 +0.523838 -0.850178 -0.0501643)[-1170.539 +47.761 +364.056]</fullTransform>
 		</transform>
 	</robot>
 	<camera>

@@ -97,10 +97,10 @@ public:
 	//! Sets this eigengrasp to the vector [1,...,1]
 	void setOnes(){for (int i=0; i<mSize; i++) mVals[i]=1.0;}
 
-	//! Returns the comonent of this eigengrasp along the i-th dimension
-	double getAxisValue(int i) const {assert(i<mSize&&i>=0); return mVals[i];}
+    //! Returns the component of this eigengrasp along the i-th dimension
+    double getAxisValue(int i) const { return mVals[i];}
 	//! Sets the component of this eigengrasp along the i-th dimension
-	void setAxisValue(int i, double val){assert(i<mSize&&i>=0); mVals[i]=val;}
+    void setAxisValue(int i, double val){ mVals[i]=val;}
 
 	//! Normalizes this eigengrasp to norm 1
 	double normalize();
