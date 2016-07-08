@@ -25,7 +25,7 @@
 
 #include "tableCheckTask.h"
 
-#include "graspitGUI.h"
+#include "graspitCore.h"
 #include "ivmgr.h"
 #include "world.h"
 #include "robot.h"
@@ -40,18 +40,18 @@ TableCheckTask::TableCheckTask(TaskDispatcher *disp, db_planner::DatabaseManager
 			       db_planner::TaskRecord rec) : PreGraspCheckTask (disp, mgr, rec)
 {
   //load the table
-  World *world = graspItGUI->getIVmgr()->getWorld();
+  World *world = graspitCore->getWorld();
   QString path = QString(getenv("GRASPIT")) + QString("/models/objects/plane.xml");
   mTable = world->importBody("Body", path);
   if (!mTable) {
     DBGA("Failed to load table");
-    mStatus = ERROR;
+    mStatus = FAILED;
   }
 }
 
 TableCheckTask::~TableCheckTask()
 {
-  World *world = graspItGUI->getIVmgr()->getWorld();
+  World *world = graspitCore->getWorld();
   if (mTable) {
     world->destroyElement(mTable, true);
   }
@@ -59,20 +59,20 @@ TableCheckTask::~TableCheckTask()
 
 void TableCheckTask::start()
 {
-  if (mStatus == ERROR) return;
+  if (mStatus == FAILED) return;
 
   //get the details of the planning task itself
   if (!mDBMgr->GetPlanningTaskRecord(mPlanningTask.taskId, &mPlanningTask)) {
     DBGA("Failed to get planning record for task");
-    mStatus = ERROR;
+    mStatus = FAILED;
     return;
   }
 
   loadHand();
-  if (mStatus == ERROR) return;
+  if (mStatus == FAILED) return;
 
   loadObject();
-  if (mStatus == ERROR) return;
+  if (mStatus == FAILED) return;
 
   //place the table in the right position
   //start way under the object
@@ -80,7 +80,7 @@ void TableCheckTask::start()
   //and move up until it touches the object
   transf tr( Quaternion::IDENTITY, vec3(0.0, 0.0, 100.0) );
   
-  World *world = graspItGUI->getIVmgr()->getWorld();
+  World *world = graspitCore->getWorld();
   world->toggleCollisions(false, mHand, mTable);
   mTable->moveTo( tr, 5.0, M_PI/36.0 );
   world->toggleCollisions(true, mHand, mTable);
@@ -90,7 +90,7 @@ void TableCheckTask::start()
   std::vector<db_planner::Grasp*> graspList;
   if(!mDBMgr->GetGrasps(*(mPlanningTask.model), mPlanningTask.handName, &graspList)){
     DBGA("Load grasps failed");
-    mStatus = ERROR;
+    mStatus = FAILED;
     emptyGraspList(graspList);
     return;
   }
@@ -106,7 +106,7 @@ void TableCheckTask::start()
 
   emptyGraspList(graspList);
   if (success) mStatus = DONE;
-  else mStatus = ERROR;
+  else mStatus = FAILED;
 }
 
 bool TableCheckTask::checkSetGrasp(db_planner::Grasp *grasp)
@@ -129,7 +129,7 @@ double TableCheckTask::getTableClearance(db_planner::Grasp *grasp)
   graspState->execute();  
 
   //check distance for grasp
-  World *world = graspItGUI->getIVmgr()->getWorld();
+  World *world = graspitCore->getWorld();
   double distance = world->getDist(mHand, mTable);
   if (distance < 0) {
     DBGA(" Grasp is in collision with table");

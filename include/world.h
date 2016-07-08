@@ -55,6 +55,7 @@ class Link;
 class GraspableBody;
 class WorldElement;
 class Tendon;
+class DynamicsEngine;
 
 typedef std::vector<position> Neighborhood;
 
@@ -157,6 +158,9 @@ protected:
   //! A pointer to the collision detection instance
   CollisionInterface *mCollisionInterface;
 
+  //! A pointer to the dynamics engine
+  DynamicsEngine *mDynamicsEngine;
+
   //! A pointer to the root of the world's Inventor scene graph
   SoSeparator *IVRoot;
 
@@ -224,7 +228,7 @@ Q_SIGNALS:
 
 public:	
   //! public constructor
-  World(QObject *parent=0,const char *name=0, IVmgr *mgr=NULL);
+  World(QObject *parent=0, const char *name=0);
 
   //! Saves the current user settings in the registry and clears the world
   ~World();
@@ -298,6 +302,9 @@ public:
   //! Returns the current simulation time for this world 
   double getWorldTime() const {return worldTime;}
 
+  //! Returns the current simulation time reference for this world
+  double& getWorldTimeRef() {return worldTime;}
+
   //! Returns the default timestep for this world 
   double getTimeStep() const {return dynamicsTimeStep;}
   
@@ -306,6 +313,9 @@ public:
 
   //! Returns the root of the Inventor scene graph for this world 
   SoSeparator *getIVRoot() const {return IVRoot;}
+
+  //! Returns axis-aligned bounding box min and max points of the world
+  void getBoundingBox(vec3& minPoint, vec3& maxPoint);
 
   //! Returns a pointer to the i-th body defined in this world 
   Body *getBody(int i) const {return bodyVec[i];}
@@ -336,6 +346,9 @@ public:
 
   //! Sets all world settings to their original default values. 
   void setDefaults();
+
+  //! Sets the ivmgr for the world.
+  void setIVMgr(IVmgr *ivmgr){myIVmgr = ivmgr;}
 
   //! Sets the world modified flag.  Should be done when a change has since the last save. 
   void setModified() {modified = true;}
@@ -480,6 +493,12 @@ public:
 
   //! Emits the signal that informs that grasps have been updated
   void emitGraspsUpdated(){Q_EMIT graspsUpdated();}
+
+  //! Emits the signal that dynamics error has occured with an error string
+  void emitdynamicsError(const char *errMsg){Q_EMIT dynamicsError(errMsg);}
+
+  //! Emits the Signal that a dynamic step has been completed
+  void emitDynamicStepTaken(){Q_EMIT dynamicStepTaken();}
 };
 
 #define WORLD_HXX

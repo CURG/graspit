@@ -47,7 +47,7 @@
 #include "dynJoint.h"
 #include "ivmgr.h"
 #include "contact.h"
-#include "graspitGUI.h"
+#include "graspitCore.h"
 #include "tinyxml.h"
 
 #ifdef PLY_READER
@@ -947,25 +947,34 @@ Body::breakContacts()
 int
 Body::loadContactData(QString fn)
 {
-	FILE *fp = fopen(fn.latin1(), "r");
-	if (!fp) {
+    std::ifstream inFile(fn.latin1(), std::ios::in);
+    if (!inFile.is_open())
+    {
 		fprintf(stderr,"Could not open filename %s\n",fn.latin1());
 		return FAILURE;
-	}
+    }
+
 	int numContacts;
 	VirtualContactOnObject *newContact;
-	if(fscanf(fp,"%d",&numContacts) <= 0)
+    inFile >> numContacts;
+    {
+		fprintf(stderr,"Failed to read contacts from %s\n",fn.latin1());
 		return FAILURE;
+    }
 
 	breakVirtualContacts();
 	for (int i=0; i<numContacts; i++) {
 		newContact = new VirtualContactOnObject();
-		newContact->readFromFile(fp);
+		if (!newContact->readFromFile(inFile))
+        {
+		    fprintf(stderr,"Failed to a contacts from %s\n",fn.latin1());
+		    return FAILURE;
+        }
 		newContact->setBody( this );
 		((Contact*)newContact)->computeWrenches();
 		addVirtualContact( newContact );//visualize the contact just read in
 	}
-	fclose(fp);
+    inFile.close();
 	return SUCCESS;
 }
 /*! Removes all virtual contacts. This only removes the virtual contacts.
@@ -1239,7 +1248,7 @@ void Body::createAxesGeometry()
 {  
   IVWorstCase = new SoSeparator;  
   IVAxes = new SoSwitch;  
-  if (graspItGUI) {
+  if (graspitCore) {
     SoSeparator *axesSep = new SoSeparator;
     axesTranToCOG = new SoTranslation;
     axesTranToCOG->translation.setValue(0,0,0);
@@ -1249,7 +1258,10 @@ void Body::createAxesGeometry()
     axesScale = new SoScale;
 	axesScale->scaleFactor = SbVec3f(1,1,1);
     axesSep->addChild(axesScale);
-    axesSep->addChild(graspItGUI->getIVmgr()->getPointers()->getChild(2));
+    if(graspitCore->getIVmgr())
+    {
+        axesSep->addChild(graspitCore->getIVmgr()->getPointers()->getChild(2));
+    }
     IVAxes->addChild(axesSep);
   }
   if (!IVRoot) IVRoot = new SoSeparator;

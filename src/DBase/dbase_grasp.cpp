@@ -28,7 +28,7 @@
 
 #include "dbase_grasp.h"
 #include "ivmgr.h"
-#include "graspitGUI.h"
+#include "graspitCore.h"
 #include "world.h"
 #include "searchState.h"
 #include "egPlanner.h"
@@ -43,7 +43,7 @@
 #include "debug.h"
 #include <Inventor/sensors/SoTimerSensor.h>
 
-DBaseBatchPlanner::DBaseBatchPlanner(IVmgr *mgr, GraspItGUI *gui)
+DBaseBatchPlanner::DBaseBatchPlanner(IVmgr *mgr, GraspitCore *gui)
 {
 	ivmgr = mgr;
 	mGui = gui;
@@ -103,7 +103,7 @@ bool DBaseBatchPlanner::processArguments(int argc, char **argv)
 
 	filename = graspitRoot + QString("/models/robots/") + QString(argv[2]) + QString("/") 
 		               + QString(argv[2]) + QString(".xml");
-	mHand = (Hand*)ivmgr->getWorld()->importRobot(filename);
+	mHand = (Hand*)graspitCore->getWorld()->importRobot(filename);
 	if ( !mHand ) {
 		DBGAF(mLogStream,"DBase planner: failed to load robot name " << argv[2] << ", or it is not a Hand");
 		return false;
@@ -116,7 +116,7 @@ bool DBaseBatchPlanner::processArguments(int argc, char **argv)
 		return false;
 	}
 	filename = QString(argv[3]);
-	mObject = static_cast<GraspableBody*>(ivmgr->getWorld()->importBody("GraspableBody",filename));
+	mObject = static_cast<GraspableBody*>(graspitCore->getWorld()->importBody("GraspableBody",filename));
 	((GraspableBody*)mObject)->showAxes(false);
 
 	if (!mObject) {
@@ -281,7 +281,7 @@ void DBaseBatchPlanner::plannerComplete()
 	DBGAF(mLogStream,"Planner completed; starting shutdown");
 
 	if (mType == GRIPPER) {
-		ivmgr->getWorld()->destroyElement(mHand,false);
+		graspitCore->getWorld()->destroyElement(mHand,false);
 		fprintf(stderr,"Taking scans...\n");
 		takeScans();
 	}
@@ -298,7 +298,7 @@ void DBaseBatchPlanner::plannerComplete()
 void DBaseBatchPlanner::sensorCB(void *data, SoSensor*)
 {
 	DBaseBatchPlanner *planner = (DBaseBatchPlanner*)data;
-	GraspItGUI *gui = planner->mGui;
+	GraspitCore *gui = planner->mGui;
 	DBGAF(planner->mLogStream,"Shutdown signal received");
 	delete planner;
 	gui->exitMainLoop();
@@ -316,15 +316,14 @@ void DBaseBatchPlanner::processSolution(const GraspPlanningState *s)
 	//we need a SearchEnergy calculator in order to do the autoGrasp in the exact same way that the planner does it
 	static SearchEnergy *se = NULL; //don't create it each time
 	if (!se) {
-		se = new SearchEnergy();
 		//this is the same type used by the loop planner
 		switch(mType) {
 		case DEXTEROUS:
-			se->setType(ENERGY_STRICT_AUTOGRASP);
+            se = SearchEnergy::getSearchEnergy(ENERGY_STRICT_AUTOGRASP);
 			break;
 		case GRIPPER: 
-			se->setType(ENERGY_CONTACT);
-			se->setContactType(CONTACT_PRESET);
+             se = SearchEnergy::getSearchEnergy(ENERGY_CONTACT);
+             se->setContactType(CONTACT_PRESET);
 			break;
 		}
 	}

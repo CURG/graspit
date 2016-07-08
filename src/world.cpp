@@ -38,6 +38,8 @@
 #include <QDateTime>
 #include <QTextStream>
 #include <Inventor/sensors/SoIdleSensor.h>
+#include <Inventor/SbBox.h>
+#include <Inventor/actions/SoGetBoundingBoxAction.h>
 
 #include "myRegistry.h"
 #include "matvecIO.h"
@@ -50,9 +52,7 @@
 #include "contact.h"
 #include "contactSetting.h"
 #include "ivmgr.h"
-#include "dynamics.h"
 #include "grasp.h"
-#include "dynJoint.h"
 #include "ivmgr.h"
 #include "barrett.h"
 #include "matvec3D.h"
@@ -61,17 +61,22 @@
 #include "tinyxml.h"
 #include "worldElementFactory.h"
 
-//#undef PQP_COLLISION
-//#undef GRASPIT_COLLISION
+#include "dynamics/dynamics.h"
+#include "dynamics/dynJoint.h"
+#include "dynamics/dynamicsEngine.h"
 
 #ifdef PQP_COLLISION
 #include "PQPCollision.h"
 #endif
-#ifdef BULLET_COLLISION
-#include "Bullet/bulletCollision.h"
-#endif
-#ifdef GRASPIT_COLLISION 
+#ifdef GRASPIT_COLLISION
 #include "Graspit/graspitCollision.h"
+#endif
+
+#ifdef GRASPIT_DYNAMICS
+#include "dynamics/graspitDynamics.h"
+#endif
+#ifdef BULLET_DYNAMICS
+#include "dynamics/bulletDynamics.h"
 #endif
 
 //simulations of arches with John Ochsendorf
@@ -83,7 +88,6 @@
 
 FILE *errFP=NULL;
 
-//#define GRASPITDBG
 #include "debug.h"
 
 //#define PROF_ENABLED
@@ -106,10 +110,10 @@ char graspitVersionStr[] = "GraspIt! version 2.1";
 that will handle all user interaction. Also initialized collision detection
 system and reads in global settings such as friction coefficients 
 */
-World::World(QObject *parent, const char *name, IVmgr *mgr) : QObject(parent,name)
+World::World(QObject *parent, const char *name) :
+    QObject(parent,name),
+    myIVmgr(NULL)
 {
-	myIVmgr = mgr;
-
 	numBodies = numGB = numRobots = numHands = 0;
 	numSelectedBodyElements = numSelectedRobotElements = 0;
 	numSelectedElements = 0;
@@ -130,13 +134,10 @@ World::World(QObject *parent, const char *name, IVmgr *mgr) : QObject(parent,nam
 	readSettings();  
 
 #ifdef PQP_COLLISION
-	mCollisionInterface = new PQPCollision();
-#endif
-#ifdef BULLET_COLLISION
-	mCollisionInterface = new BulletCollision();
+  mCollisionInterface = new PQPCollision();
 #endif
 #ifdef GRASPIT_COLLISION
-	mCollisionInterface = new GraspitCollision();
+  mCollisionInterface = new GraspitCollision();
 #endif
 
 	IVRoot = new SoSeparator;
@@ -148,6 +149,13 @@ World::World(QObject *parent, const char *name, IVmgr *mgr) : QObject(parent,nam
         // This has to happen at runtime, so it's placed here
         // maybe we can find a better solution at some point.
         WorldElementFactory::registerBuiltinCreators();
+
+#ifdef GRASPIT_DYNAMICS
+  mDynamicsEngine = new GraspitDynamics(this);
+#endif
+#ifdef BULLET_DYNAMICS
+  mDynamicsEngine = new BulletDynamics(this);
+#endif
 }
 
 /*! Saves the global settings and parameters and deletes the world
@@ -177,7 +185,28 @@ World::~World()
 
 	if (idleSensor) delete idleSensor;
 	delete mCollisionInterface;
+    delete mDynamicsEngine;
 	IVRoot->unref();
+}
+
+
+/*! Returns axis-aligned bounding box min and max points of the world
+ */
+void World::getBoundingBox(vec3& minPoint, vec3& maxPoint)
+{
+    minPoint.set(0,0,0);
+    maxPoint.set(0,0,0);
+
+    // viewport required for any viewport-dependent 
+    // nodes (eg text), but not required for others
+    SbViewportRegion anyVP(0,0);  
+    SoGetBoundingBoxAction bbAction( anyVP );
+    bbAction.apply( IVRoot );
+    SbBox3f bbox = bbAction.getBoundingBox();
+    const SbVec3f& minIV = bbox.getMin();
+    const SbVec3f& maxIV = bbox.getMax();
+    minPoint.set(minIV[0], minIV[1], minIV[2]);
+    maxPoint.set(maxIV[0], maxIV[1], maxIV[2]);
 }
 
 /*! Returns the material id of a material with name \a matName 
@@ -415,7 +444,7 @@ World::destroyElement(WorldElement *e, bool deleteElement)
 		for (bp=bodyVec.begin();bp!=bodyVec.end();bp++) {
 			if (*bp == e) {
 				bodyVec.erase(bp); numBodies--;
-				DBGP("removed body "<<((Body *)e)->getName()<<" from world");
+				DBGP("removed body "<<((Body *)e)->getName().toStdString().c_str() <<" from world");
 				break;
 			}
 		}
@@ -430,7 +459,7 @@ World::destroyElement(WorldElement *e, bool deleteElement)
 							(*hp)->getGrasp()->setObject(NULL);
 					}
 				}
-				DBGP("removed GB " << ((Body *)e)->getName()<<" from world");
+				DBGP("removed GB " << ((Body *)e)->getName().toStdString().c_str()<<" from world");
 				break;
 			}
 		}
@@ -445,7 +474,7 @@ World::destroyElement(WorldElement *e, bool deleteElement)
 					if (numHands > 0) currentHand = handVec[0];
 					else currentHand = NULL;
 				}
-				DBGP("removed hand " << ((Robot *)e)->getName() << " from world");  
+				DBGP("removed hand " << ((Robot *)e)->getName().toStdString().c_str() << " from world");
 				Q_EMIT handRemoved();
 				break;
 			}
@@ -453,7 +482,7 @@ World::destroyElement(WorldElement *e, bool deleteElement)
 		for (rp=robotVec.begin();rp!=robotVec.end();rp++) {
 			if (*rp == e) {
 				robotVec.erase(rp); numRobots--;
-				DBGP("removed robot " << ((Robot *)e)->getName() << " from world"); 
+				DBGP("removed robot " << ((Robot *)e)->getName().toStdString().c_str() << " from world");
 				break;
 			}
 		}
@@ -721,7 +750,11 @@ World::loadFromXml(const TiXmlElement* root,QString rootPath)
 				QTWARNING("Failed to load focal distance");
 				return FAILURE;				
 			}
-			myIVmgr->setCamera(px, py, pz, q1, q2, q3, q4, fd);
+            if (myIVmgr) {
+                myIVmgr->setCamera(px, py, pz, q1, q2, q3, q4, fd);
+            }else{
+                DBGA("Could not set camera");
+            }
 			cameraFound = true;
 		}
 		else {
@@ -732,7 +765,9 @@ World::loadFromXml(const TiXmlElement* root,QString rootPath)
 	}
 
 	if (!cameraFound) {
-		myIVmgr->getViewer()->viewAll();
+        if (myIVmgr) {
+            myIVmgr->getViewer()->viewAll();
+        }
 	}
 	findAllContacts();
 	modified = false;
@@ -826,14 +861,39 @@ World::save(const QString &filename)
 			}
 		}
 	}
-	stream<<"\t<camera>"<<endl;
-	float px, py, pz, q1, q2, q3, q4, fd;
+
+    stream<<"\t<camera>"<<endl;
 	if (myIVmgr) {
+        float px, py, pz, q1, q2, q3, q4, fd;
 		myIVmgr->getCamera(px, py, pz, q1, q2, q3, q4, fd);
 		stream<<"\t\t<position>"<<px<<" "<<py<<" "<<pz<<"</position>"<<endl;
 		stream<<"\t\t<orientation>"<<q1<<" "<<q2<<" "<<q3<<" "<<q4<<"</orientation>"<<endl;
 		stream<<"\t\t<focalDistance>"<<fd<<"</focalDistance>"<<endl;
-	}
+	} else {
+        // the object will be viewed along the negative z-axis from a distance
+        // determined by a target angle between the view point and the
+        // x-coordinate corners of the world bounding box.
+        static float angle = 60;  // angle (degrees) between rays cast to two corners of the bounding box
+        if (fabs(angle)<1e-05) {
+            DBGA("Cannot choose zero angle, forcing to 10 as minimum");
+            angle = 10;
+        }
+        vec3 minPoint, maxPoint, center;  // min/max points of AABB
+        getBoundingBox(minPoint, maxPoint);
+        center = (minPoint + maxPoint) * 0.5;
+        float xLen = fabs(maxPoint.x()-minPoint.x());  // lenght of BB along x
+        float zLen = fabs(maxPoint.z()-minPoint.z());  // lenght of BB along z
+        float dist = fabs(xLen*0.5 / tan (angle * 0.5 * M_PI/180));  // distance along z
+        // std::cout<<"xLen: "<<xLen<<", zLen: "<<zLen<<", dist = "<<dist<<std::endl;
+
+        // write results to stream
+        vec3 pos(center.x(), center.y(), center.z() + zLen*0.5 + dist);
+		stream<<"\t\t<position>"<<pos.x()<<" "<<pos.y()<<" "<<pos.z()<<"</position>"<<endl;
+        // orientation along negative z (with y as up vector) is default in Inventor, so
+        // keep identity quaternion
+		stream<<"\t\t<orientation>"<<0<<" "<<0<<" "<<0<<" "<<1<<"</orientation>"<<endl;
+		stream<<"\t\t<focalDistance>"<<dist<<"</focalDistance>"<<endl;
+    }
 	stream<<"\t</camera>"<<endl;
 	stream<<"</world>"<<endl;
 	file.close();
@@ -899,6 +959,7 @@ World::addBody(Body *newBody)
 	IVRoot->addChild(newBody->getIVRoot());
 	modified = true;
 	Q_EMIT numElementsChanged();
+    mDynamicsEngine->addBody(newBody);
 }
 
 /*! Adds a robot link. No need to add it to scene graph, since the robot 
@@ -910,6 +971,7 @@ World::addLink(Link *newLink)
 {
 	bodyVec.push_back(newLink);
 	numBodies++;
+    mDynamicsEngine->addBody(newLink);
 }
 
 /*! Loads a robot from a file and adds it to the world. \a filename must
@@ -1012,6 +1074,7 @@ World::addRobot(Robot *robot, bool addToScene)
 
 	modified = true;
 	Q_EMIT numElementsChanged();
+    mDynamicsEngine->addRobot(robot);
 }
 
 
@@ -1115,8 +1178,8 @@ World::selectElement(WorldElement *e)
 	std::list<WorldElement *>::iterator ep;
 	int c,l;
 
-	DBGP("selecting element "<<e->getName().latin1());
-	if (e->inherits("Body")) {DBGP(" with collision id " << ((Body*)e)->getId());}
+	DBGP("selecting element "<<e->getName().toStdString().c_str());
+	if (e->inherits("Body")) {DBGP(" with collision id " << ((Body*)e)->getName().toStdString().c_str());}
 
 	if (e->inherits("Body")) numSelectedBodyElements++;
 	else if (e->inherits("Robot")) numSelectedRobotElements++;
@@ -1154,7 +1217,7 @@ World::deselectElement(WorldElement *e)
 	std::list<WorldElement *>::iterator ep;
 	int c,l;
 
-	DBGP("deselecting element "<<e->getName().latin1());
+	DBGP("deselecting element "<<e->getName().toStdString().c_str());
 	if (e->inherits("Body")) numSelectedBodyElements--;
 	else if (e->inherits("Robot")) numSelectedRobotElements--;
 	numSelectedElements--;
@@ -1591,13 +1654,13 @@ World::findContacts(CollisionReport &colReport)
 			}
 		}
 		if (duplicate) {
-			DBGP("duplicate: " << (*it).first->getName().latin1() << "--" <<  (*it).second->getName().latin1());
+            DBGP("duplicate: " << (*it).first->getName().toStdString().c_str() << "--" <<  (*it).second->getName().toStdString().c_str());
 			it = colReport.erase(it);
 			continue;
 		}
 
 		if ( getDist( (*it).first, (*it).second ) > Contact::THRESHOLD ) {
-			DBGP("no contact: " << (*it).first->getName().latin1() << "--" << (*it).second->getName().latin1());
+            DBGP("no contact: " << (*it).first->getName().toStdString().c_str()<< "--" << (*it).second->getName().toStdString().c_str());
 			it = colReport.erase(it);
 			continue;
 		}
@@ -1653,7 +1716,7 @@ World::findAllContacts()
 	DBGP("found " << numContacts << " contacts. Adding...");
 	for (int i=0;i<numContacts;i++) {
 		addContacts( report[i].first, report[i].second, report[i].contacts, softContactsAreOn());
-		DBGP( report[i].first->getName().latin1() << " - " << report[i].second->getName().latin1() );
+		DBGP( report[i].first->getName().toStdString().c_str() << " - " << report[i].second->getName().toStdString().c_str() );
 	}
 }
 
@@ -1687,6 +1750,7 @@ World::turnOnDynamics()
 	//PROF_RESET_ALL;
 	//PROF_START_TIMER(DYNAMICS);
 	dynamicsOn = true;
+    mDynamicsEngine->turnOnDynamics();
 	if (idleSensor) delete idleSensor;
 	idleSensor = new SoIdleSensor(dynamicsCB,this);
 	idleSensor->schedule();
@@ -1701,6 +1765,7 @@ World::turnOffDynamics()
 	if (idleSensor) delete idleSensor;
 	idleSensor = NULL;
 	dynamicsOn = false;
+    mDynamicsEngine->turnOffDynamics();
 	for (int i=0; i<numRobots; i++) {
 		//actually set joint values
 		robotVec[i]->updateJointValuesFromDynamics();
@@ -1844,16 +1909,16 @@ World::moveDynamicBodies(double timeStep)
 		if (numCols) {
 			std::cout << "COLLIDE!" << std::endl;
 			for (i=0;i<numCols;i++) {
-				std::cout << colReport[i].first->getName() << " collided with " << 
-					colReport[i].second->getName() << std::endl;
+			  std::cout << colReport[i].first->getName().toStdString().c_str() << " collided with " <<
+			    colReport[i].second->getName().toStdString().c_str() << std::endl;
 			}
 
 			for (i=0;i<numCols;i++) {
 				tmpDist = getDist(colReport[i].first,colReport[i].second);
 				if (tmpDist < minDist) minDist = tmpDist;	
 				std::cout << "minDist: " << tmpDist <<" between " << std::endl;
-				std::cout << colReport[i].first->getName() << " and " <<
-					colReport[i].second->getName() << std::endl;
+				std::cout << colReport[i].first->getName().toStdString().c_str() << " and " <<
+				  colReport[i].second->getName().toStdString().c_str() << std::endl;
 			}      
 		}
 #endif      
@@ -1894,8 +1959,8 @@ World::moveDynamicBodies(double timeStep)
 						minDist = tmpDist;
 						min_body_1 = colReport[i].first->getName().latin1();
 						min_body_2 = colReport[i].second->getName().latin1();
-						DBGP("minDist: " << minDist << " between " << colReport[i].first->getName() << 
-							" and " << colReport[i].second->getName());
+						DBGP("minDist: " << minDist << " between " << colReport[i].first->getName().toStdString().c_str() <<
+						     " and " << colReport[i].second->getName().toStdString().c_str());
 					}
 				}
 			}
@@ -1938,7 +2003,7 @@ World::moveDynamicBodies(double timeStep)
 
 #ifdef GRASPITDBG
 	std::cout << "CHECKING COLLISIONS AT MIDDLE OF STEP: ";
-	numCols = getCollisionReport(colReport);
+	numCols = getCollisionReport(&colReport);
 
 	if (!numCols){ 
 		std::cout << "None." << std::endl;
@@ -1946,8 +2011,8 @@ World::moveDynamicBodies(double timeStep)
 	else {
 		std::cout << numCols <<" found!!!" << std::endl;
 		for (i=0;i<numCols;i++) {
-			std::cout << colReport[i].first->getName() << " collided with " <<
-				colReport[i].second->getName() << std::endl;
+		  std::cout << colReport[i].first->getName().toStdString().c_str() << " collided with " <<
+		    colReport[i].second->getName().toStdString().c_str() << std::endl;
 		}
 	}
 #endif
@@ -2045,11 +2110,11 @@ World::computeNewVelocities(double timeStep)
 #ifdef GRASPITDBG
 			std::cout << "Island "<< ++islandCount<<" Bodies: ";
 			for (i=0;i<numDynBodies;i++)
-				std::cout << dynIsland[i]->getName() <<" ";
+			  std::cout << dynIsland[i]->getName().toStdString().c_str() <<" ";
 			std::cout << std::endl;
-			std::cout << "Island Robots"<< islandCount<<" Robots: ";
-			for (i=0;i<islandRobots.size();;i++)
-				std::cout << islandRobots[i]->getName() <<" ";
+			std::cout << "Island Robots"<< islandCount <<" Robots: ";
+			for (i=0;i<islandRobots.size();i++)
+			  std::cout << islandRobots[i]->getName().toStdString().c_str() <<" ";
 			std::cout << std::endl << std::endl;
 #endif  
 
@@ -2086,40 +2151,6 @@ World::computeNewVelocities(double timeStep)
 		if (bodyVec[i]->isDynamic())
 			((DynamicBody *)bodyVec[i])->resetDynamicsFlag();
 
-	/*  double conMaxErr = 0.0;
-
-	if (!errFP) errFP=fopen("constraintError.txt","w");
-	fprintf(errFP,"%le ",worldTime);
-	for (i=0;i<numBodies;i++) {
-	contactList = bodyVec[i]->getContacts();
-	for (cp=contactList.begin();cp!=contactList.end();cp++) {
-	conMaxErr = MAX(conMaxErr,fabs((*cp)->getConstraintError()));
-	}
-
-	}
-	fprintf(errFP,"%le ",conMaxErr);
-	fprintf(errFP," ");
-	int k,l;
-	double jointErrMax=0.0;
-	for (i=0;i<numRobots;i++) {
-	if (robotVec[i]->getBase()->getDynJoint())
-	for (j=0;j<3;j++)
-	jointErrMax = MAX(jointErrMax,fabs(robotVec[i]->getBase()->getDynJoint()->getConstraintError()[j]));
-	//fprintf(errFP,"%le ",robotVec[i]->getBase()->getDynJoint()->getConstraintError()[j]);
-	for (j=0;j<robotVec[i]->getNumChains();j++) {
-	KinematicChain *chain=robotVec[i]->getChain(j);
-	for (k=0;k<chain->getNumLinks();k++)
-	if (chain->getLink(k)->getDynJoint())
-	for (l=0;l<3;l++)
-	jointErrMax = MAX(jointErrMax,fabs(robotVec[i]->getBase()->getDynJoint()->getConstraintError()[j]));
-	// fprintf(errFP,"%le ",chain->getLink(k)->getDynJoint()->getConstraintError()[l]);
-	}
-	}
-	fprintf(errFP,"%le",jointErrMax);
-	fprintf(errFP,"\n");
-
-	*/
-
 	Q_EMIT dynamicStepTaken();
 	return 0;
 }
@@ -2146,23 +2177,11 @@ joint constraints, for the next time step.
 void
 World::stepDynamics()
 {
-	resetDynamicWrenches();
-	double actualTimeStep = moveDynamicBodies(dynamicsTimeStep);
-	if (actualTimeStep<0) {
-		turnOffDynamics();
-		Q_EMIT dynamicsError("Timestep failsafe reached.");
-		return;
-	}
-
-	for (int i=0; i<numRobots; i++) {
-		robotVec[i]->DOFController(actualTimeStep);
-		robotVec[i]->applyJointPassiveInternalWrenches();
-	}
-
-	if (computeNewVelocities(actualTimeStep)) {
-		Q_EMIT dynamicsError("LCP could not be solved.");
-		return;
-	} 
+    int ret;
+    ret=mDynamicsEngine->stepDynamics();
+    if(ret==-1){
+      return;
+    }
 	if (idleSensor) idleSensor->schedule();
 }
 
